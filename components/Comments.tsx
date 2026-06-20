@@ -14,17 +14,20 @@ interface Comment {
   dislikes: number;
   createdAt: string;
   removed: boolean;
+  language: string;
+  displayText?: string;
 }
 
 interface CommentsProps {
   videoId: string;
 }
 
-// In-memory comments storage (shared across components)
+// In-memory comments storage (shared across all users)
+// This ensures all users see the same comments
 let globalComments: Comment[] = [];
 let nextCommentId = 1;
 
-// Get user's city from IP (demo - in production use real IP geolocation)
+// Get user's city from IP (using free API)
 const getUserCity = async (): Promise<string> => {
   try {
     const res = await fetch('https://ipapi.co/json/');
@@ -40,7 +43,6 @@ const translateText = async (text: string, targetLang: string): Promise<string> 
   if (targetLang === 'en') return text;
   
   try {
-    // Using free MyMemory translation API
     const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`);
     const data = await res.json();
     return data.responseData.translatedText || text;
@@ -57,7 +59,7 @@ export default function Comments({ videoId }: CommentsProps) {
   const [userCity, setUserCity] = useState('Unknown');
   const [translateLang, setTranslateLang] = useState('en');
   const [translations, setTranslations] = useState<Record<number, string>>({});
-  const [showTranslateFor, setShowTranslateFor] = useState<number | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const languages = [
     { code: 'en', name: 'English' },
@@ -70,14 +72,22 @@ export default function Comments({ videoId }: CommentsProps) {
     { code: 'fr', name: 'Français' }
   ];
 
-  // Load user data
+  // Load user data and city
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
-    if (savedUser) {
+    const token = localStorage.getItem('token');
+    
+    if (savedUser && token) {
       setUser(JSON.parse(savedUser));
+      setIsLoggedIn(true);
     }
+    
     getUserCity().then(setUserCity);
     loadComments();
+    
+    // Refresh comments every 5 seconds to show new ones
+    const interval = setInterval(loadComments, 5000);
+    return () => clearInterval(interval);
   }, [videoId]);
 
   const loadComments = () => {
@@ -99,7 +109,7 @@ export default function Comments({ videoId }: CommentsProps) {
       return;
     }
 
-    if (!user) {
+    if (!isLoggedIn) {
       toast.error('Please login to comment');
       return;
     }
@@ -116,9 +126,11 @@ export default function Comments({ videoId }: CommentsProps) {
       likes: 0,
       dislikes: 0,
       createdAt: new Date().toISOString(),
-      removed: false
+      removed: false,
+      language: 'en'
     };
 
+    // Add to global storage
     globalComments.push(newCommentObj);
     setNewComment('');
     loadComments();
@@ -127,7 +139,7 @@ export default function Comments({ videoId }: CommentsProps) {
   };
 
   const handleLike = async (commentId: number) => {
-    if (!user) {
+    if (!isLoggedIn) {
       toast.error('Please login to like comments');
       return;
     }
@@ -141,7 +153,7 @@ export default function Comments({ videoId }: CommentsProps) {
   };
 
   const handleDislike = async (commentId: number) => {
-    if (!user) {
+    if (!isLoggedIn) {
       toast.error('Please login to dislike comments');
       return;
     }
@@ -161,11 +173,22 @@ export default function Comments({ videoId }: CommentsProps) {
 
   const handleTranslate = async (commentId: number, text: string) => {
     if (translateLang === 'en') {
-      setShowTranslateFor(null);
+      // If English selected, remove translation
+      const updated = { ...translations };
+      delete updated[commentId];
+      setTranslations(updated);
       return;
     }
     
-    setShowTranslateFor(commentId);
+    // Check if already translated to this language
+    if (translations[commentId]) {
+      // Remove translation if already shown
+      const updated = { ...translations };
+      delete updated[commentId];
+      setTranslations(updated);
+      return;
+    }
+    
     const translated = await translateText(text, translateLang);
     setTranslations(prev => ({ ...prev, [commentId]: translated }));
     toast.success(`Translated to ${languages.find(l => l.code === translateLang)?.name}`);
@@ -184,6 +207,10 @@ export default function Comments({ videoId }: CommentsProps) {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
+  };
+
+  const isTranslated = (commentId: number) => {
+    return translations[commentId] !== undefined;
   };
 
   return (
@@ -212,18 +239,26 @@ export default function Comments({ videoId }: CommentsProps) {
           type="text"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Write a comment... (No special characters allowed)"
-          className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder={isLoggedIn ? "Write a comment... (No special characters allowed)" : "Please login to comment"}
+          disabled={!isLoggedIn}
+          className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           onKeyPress={(e) => e.key === 'Enter' && handlePostComment()}
         />
         <button
           onClick={handlePostComment}
-          disabled={loading}
+          disabled={!isLoggedIn || loading}
           className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-semibold transition disabled:opacity-50"
         >
           {loading ? 'Posting...' : 'Post'}
         </button>
       </div>
+
+      {/* Login prompt if not logged in */}
+      {!isLoggedIn && (
+        <div className="text-center text-sm text-gray-400 mb-4">
+          🔐 <a href="/login" className="text-blue-400 hover:underline">Login</a> to post, like, and dislike comments
+        </div>
+      )}
 
       {/* Comments List */}
       <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
@@ -252,13 +287,15 @@ export default function Comments({ videoId }: CommentsProps) {
               {/* Comment Text with Translation */}
               <div className="mb-3">
                 <p className="text-gray-200">
-                  {showTranslateFor === comment.id && translations[comment.id]
-                    ? translations[comment.id]
-                    : comment.text}
+                  {isTranslated(comment.id) ? translations[comment.id] : comment.text}
                 </p>
-                {showTranslateFor === comment.id && translations[comment.id] && (
+                {isTranslated(comment.id) && (
                   <button
-                    onClick={() => setShowTranslateFor(null)}
+                    onClick={() => {
+                      const updated = { ...translations };
+                      delete updated[comment.id];
+                      setTranslations(updated);
+                    }}
                     className="text-xs text-blue-400 hover:text-blue-300 mt-1"
                   >
                     Show original
@@ -270,27 +307,40 @@ export default function Comments({ videoId }: CommentsProps) {
               <div className="flex items-center gap-4 flex-wrap">
                 <button
                   onClick={() => handleLike(comment.id)}
-                  className="flex items-center gap-1 text-sm text-gray-300 hover:text-green-400 transition"
+                  disabled={!isLoggedIn}
+                  className="flex items-center gap-1 text-sm text-gray-300 hover:text-green-400 transition disabled:opacity-50"
                 >
                   👍 {comment.likes}
                 </button>
                 <button
                   onClick={() => handleDislike(comment.id)}
-                  className="flex items-center gap-1 text-sm text-gray-300 hover:text-red-400 transition"
+                  disabled={!isLoggedIn}
+                  className="flex items-center gap-1 text-sm text-gray-300 hover:text-red-400 transition disabled:opacity-50"
                 >
                   👎 {comment.dislikes}
                 </button>
                 <button
                   onClick={() => handleTranslate(comment.id, comment.text)}
-                  className="flex items-center gap-1 text-sm text-gray-300 hover:text-blue-400 transition"
+                  className={`flex items-center gap-1 text-sm transition ${
+                    isTranslated(comment.id) ? 'text-blue-400' : 'text-gray-300 hover:text-blue-400'
+                  }`}
                 >
-                  🌐 Translate
+                  🌐 {isTranslated(comment.id) ? 'Hide Translation' : 'Translate'}
                 </button>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* Stats Footer */}
+      {comments.length > 0 && (
+        <div className="mt-4 text-xs text-gray-500 text-center border-t border-slate-700 pt-3">
+          {comments.length} comments • 
+          {comments.reduce((sum, c) => sum + c.likes, 0)} total likes •
+          Comments with 2+ dislikes are automatically removed
+        </div>
+      )}
 
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
