@@ -331,7 +331,6 @@ export default function WatchPage() {
             <DownloadButton 
               videoId={currentVideoIndex.toString()}
               videoTitle={currentVideo.title}
-              videoDuration={currentVideo.duration}
               videoThumbnail="🎬"
             />
             
