@@ -1,11 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserLocation, getTheme, getOTPMethod } from '@/lib/location';
 
 export async function GET(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for') || 'unknown';
-  const location =await getUserLocation();
-  const theme = getTheme(location);
-  const authMethod = getOTPMethod(location);
-  
-  return NextResponse.json({ location, theme, authMethod });
+  try {
+    // Get client IP from headers
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 
+               req.headers.get('x-real-ip') || 
+               'unknown';
+    
+    console.log(`📍 Client IP: ${ip}`);
+    
+    // Try to get location from IP
+    try {
+      const response = await fetch(`https://ipapi.co/${ip}/json/`);
+      const data = await response.json();
+      
+      const state = data.region || 'Unknown';
+      const city = data.city || 'Unknown';
+      const southStates = ['Tamil Nadu', 'Kerala', 'Karnataka', 'Andhra Pradesh', 'Telangana', 'TN', 'KL', 'KA', 'AP', 'TG'];
+      const isSouthIndia = southStates.some(s => state.toLowerCase().includes(s.toLowerCase()));
+      
+      const now = new Date();
+      const istHour = (now.getUTCHours() + 5 + 30/60) % 24;
+      const isSpecialTime = istHour >= 10 && istHour < 12;
+      const theme = (isSouthIndia && isSpecialTime) ? 'light' : 'dark';
+      
+      return NextResponse.json({
+        city,
+        state,
+        isSouthIndia,
+        theme,
+        ip
+      });
+    } catch (ipError) {
+      console.error('IP lookup failed:', ipError);
+      
+      // Fallback: Use browser geolocation (client will provide)
+      return NextResponse.json({
+        city: 'Unknown',
+        state: 'Unknown',
+        isSouthIndia: false,
+        theme: 'dark',
+        ip: 'unknown'
+      });
+    }
+  } catch (error) {
+    console.error('Location API error:', error);
+    return NextResponse.json({
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      isSouthIndia: false,
+      theme: 'dark'
+    });
+  }
 }
