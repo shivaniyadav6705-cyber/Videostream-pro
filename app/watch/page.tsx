@@ -33,7 +33,7 @@ export default function WatchPage() {
   // Each video has a different title but same reliable source
   // ============================================
   const PLAYLIST = [
-  { src: "/videos/video1.mp4", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 1 - Hot Air Baloon", duration: "00:15" },
+  { src: "https://www.pexels.com/download/video/38104915/", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 1 - Hot Air Baloon", duration: "00:15" },
   { src: "/videos/video2.mp4", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 2 - Mountains", duration: "00:06" },
   { src: "/videos/video3.mp4", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 3 - Boat", duration: "00:12" },
   { src: "/videos/video4.mp4", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 4 - Golf", duration: "00:15" },
