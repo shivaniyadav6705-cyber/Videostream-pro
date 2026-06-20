@@ -33,26 +33,26 @@ export default function WatchPage() {
   // Each video has a different title but same reliable source
   // ============================================
   const PLAYLIST = [
-  { src: "https://www.pexels.com/download/video/38104915/", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 1 - Hot Air Baloon", duration: "00:15" },
-  { src: "/videos/video2.mp4", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 2 - Mountains", duration: "00:06" },
-  { src: "/videos/video3.mp4", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 3 - Boat", duration: "00:12" },
-  { src: "/videos/video4.mp4", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 4 - Golf", duration: "00:15" },
-  { src: "/videos/video5.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 5 -Highway", duration: "00:17" },
-  { src: "/videos/video6.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 6 - Cycle", duration: "00:15" },
-  { src: "/videos/video7.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 7 - Guitar", duration: "00:39" },
-  { src: "/videos/video8.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 8 - Band", duration: "00:09" },
-  { src: "/videos/video9.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 9 - Desert", duration: "00:05" },
-  { src: "/videos/video10.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 10 - Snow Mountains", duration: "00:07" },
-  { src: "/videos/video11.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 11 - Flowers", duration: "00:12" },
-  { src: "/videos/video12.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 12 - Parrot", duration: "00:08" },
-  { src: "/videos/video13.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 13 - Church", duration: "00:09" },
-  { src: "/videos/video14.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 14 - Water", duration: "00:16" },
-  { src: "/videos/video15.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 15 - Farm", duration: "00:05" },
-  { src: "/videos/video16.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 16 - Train", duration: "00:07" },
-  { src: "/videos/video17.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 17 - Horse", duration: "00:16" },
-  { src: "/videos/video18.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 18 - River", duration: "00:15" },
-  { src: "/videos/video19.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 19 - Cooking", duration: "00:09" },
-  { src: "/videos/video20.mp4", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 20 - Nature", duration: "00:36" },
+  { src: "https://www.pexels.com/download/video/38104915/", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 1"},
+  { src: "https://www.pexels.com/download/video/18120715/", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 2"},
+  { src: "https://www.pexels.com/download/video/36553647/", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 3"},
+  { src: "https://www.pexels.com/download/video/37484107/", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 4"},
+  { src: "https://www.pexels.com/download/video/37595348/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 5"},
+  { src: "https://www.pexels.com/download/video/37694784/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 6"},
+  { src: "https://www.pexels.com/download/video/30768374/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 7"},
+  { src: "https://www.pexels.com/download/video/38110755/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 8"},
+  { src: "https://www.pexels.com/download/video/37802067/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 9"},
+  { src: "https://www.pexels.com/download/video/37915114/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 10"},
+  { src: "https://www.pexels.com/download/video/38017606/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 11"},
+  { src: "https://www.pexels.com/download/video/38088039/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 12"},
+  { src: "https://www.pexels.com/download/video/38133491/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 13"},
+  { src: "https://www.pexels.com/download/video/38031339/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 14"},
+  { src: "https://www.pexels.com/download/video/34624968/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 15"},
+  { src: "https://www.pexels.com/download/video/37909130/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 16"},
+  { src: "https://www.pexels.com/download/video/27970371/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 17"},
+  { src: "https://www.pexels.com/download/video/37459770/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 18"},
+  { src: "https://www.pexels.com/download/video/18070602/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 19"},
+  { src: "https://www.pexels.com/download/video/37860532/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 20"},
 ];
 
   // Watch time limits per plan (in seconds)
@@ -323,7 +323,7 @@ export default function WatchPage() {
           <div>
             <h2 className="text-xl font-semibold text-white">{currentVideo.title}</h2>
             <p className="text-sm text-gray-400">
-              📹 Video {currentVideoIndex + 1} of {totalVideos} | ⏱️ Duration: {currentVideo.duration}
+              📹 Video {currentVideoIndex + 1} of {totalVideos} 
             </p>
           </div>
           
