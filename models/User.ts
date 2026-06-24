@@ -7,10 +7,15 @@ const UserSchema = new mongoose.Schema({
   phone: { type: String },
   password: { type: String, required: true },
   plan: { type: String, enum: ['free', 'bronze', 'silver', 'gold'], default: 'free' },
+  planStartDate: { type: Date, default: Date.now },
+  planEndDate: { type: Date },
   watchTimeUsed: { type: Number, default: 0 },
   watchDate: { type: String, default: () => new Date().toDateString() },
   downloadsToday: { type: Number, default: 0 },
   downloadDate: { type: String, default: () => new Date().toDateString() },
+  lastPaymentId: { type: String },
+  planOrderId: { type: String },
+  upgradedAt: { type: Date },
   createdAt: { type: Date, default: Date.now }
 });
 

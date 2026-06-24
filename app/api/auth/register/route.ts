@@ -1,61 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserLocation, getTheme } from '@/lib/location';
-
-declare global {
-  var _users: any[];
-  var _nextId: number;
-}
-global._users = global._users || [];
-global._nextId = global._nextId || 1;
+import { connectDB } from '@/lib/db';
+import User from '@/models/User';
+import jwt from 'jsonwebtoken';
 
 export async function POST(req: NextRequest) {
   try {
+    await connectDB();
     const { username, email, phone, password } = await req.json();
     
-    console.log('📝 Register:', { username, email, phone });
-    
-    if (!username || !email || !password) {
-      return NextResponse.json({ error: 'All fields required' }, { status: 400 });
-    }
-    
-    const existing = global._users.find((u: any) => u.email === email);
-    if (existing) {
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    if (existingUser) {
       return NextResponse.json({ error: 'User already exists' }, { status: 400 });
     }
     
-    const newUser = {
-      id: global._nextId++,
-      username,
-      email,
-      phone: phone || '',
-      password,
-      plan: 'free', // free, bronze, silver, gold
-      downloadsToday: 0,
-      lastDownloadDate: new Date().toDateString(),
-      downloadedVideos: [], // Array to store downloaded video info
-      createdAt: new Date().toISOString(),
-    };
+    const user = new User({ username, email, phone, password });
+    await user.save();
     
-    global._users.push(newUser);
-    
-    const location = await getUserLocation();
-    const theme = getTheme(location);
-    const token = Buffer.from(JSON.stringify({ userId: newUser.id, email: newUser.email })).toString('base64');
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
     
     return NextResponse.json({
       success: true,
       token,
-      user: { 
-        id: newUser.id, 
-        username: newUser.username, 
-        email: newUser.email, 
-        plan: newUser.plan,
-        downloadedVideos: []
-      },
-      theme,
+      user: { id: user._id, username, email, plan: user.plan }
     });
   } catch (error: any) {
-    console.error('Register error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
