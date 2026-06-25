@@ -10,7 +10,7 @@ const PLAN_DETAILS: Record<string, any> = {
     name: 'Bronze Plan',
     watchTime: '7 minutes per day',
     price: 10,
-    features: ['7 minutes daily', 'SD Quality (480p)', 'Basic Support', '1 Device at a time'],
+    features: ['7 minutes daily', 'SD Quality (480p)', 'Basic Support', '1 Device'],
   },
   silver: {
     name: 'Silver Plan',
@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
-    // Verify signature
     const text = razorpay_order_id + '|' + razorpay_payment_id;
     const signature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
@@ -52,7 +51,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    // Update user
     const user = await User.findById(decoded.userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -73,7 +71,6 @@ export async function POST(req: NextRequest) {
 
     console.log(`✅ User upgraded: ${user.username} → ${planName}`);
 
-    // Send invoice email
     const planInfo = PLAN_DETAILS[planType];
     if (planInfo) {
       const emailSent = await sendInvoiceEmail(user.email, {

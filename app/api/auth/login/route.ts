@@ -4,7 +4,6 @@ import User from '@/models/User';
 import { sendEmailOTP, sendSMSOTP, generateOTP } from '@/lib/email';
 import { getLocationFromIP, getOTPMethod, getTheme } from '@/lib/location';
 
-// Store OTPs globally
 declare global {
   var _otps: Record<string, { otp: string; expiresAt: number }>;
 }
@@ -21,7 +20,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email/Phone and password required' }, { status: 400 });
     }
 
-    // Find user
     const user = await User.findOne({
       $or: [{ email: emailOrPhone }, { phone: emailOrPhone }],
     });
@@ -31,33 +29,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found. Please register first.' }, { status: 401 });
     }
 
-    // Verify password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       console.log(`❌ Invalid password for: ${emailOrPhone}`);
       return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
     }
 
-    // Get location
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
     const location = await getLocationFromIP(ip);
     const method = getOTPMethod(location);
     const theme = getTheme(location);
 
-    // Generate OTP
     const otp = generateOTP();
     const otpExpiry = Date.now() + 10 * 60 * 1000;
-
-    // Store OTP
     const userId = user._id.toString();
+
     global._otps[userId] = { otp, expiresAt: otpExpiry };
 
-    console.log(`📝 OTP stored for user: ${userId}`);
     console.log(`🔑 OTP: ${otp}`);
     console.log(`📧 Method: ${method}`);
     console.log(`⏰ Expires at: ${new Date(otpExpiry).toLocaleString()}`);
 
-    // Send OTP based on location
     let otpSent = false;
     if (method === 'email') {
       otpSent = await sendEmailOTP(user.email, otp);
@@ -73,8 +65,7 @@ export async function POST(req: NextRequest) {
       userId: userId,
       method,
       theme,
-      otp: otp, // FOR TESTING ONLY - REMOVE IN PRODUCTION
-      expiresAt: otpExpiry,
+      otp: otp,
     });
   } catch (error: any) {
     console.error('Login error:', error);

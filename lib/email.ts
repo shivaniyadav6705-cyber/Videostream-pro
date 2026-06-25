@@ -66,7 +66,7 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
 }
 
 // ============================================
-// SEND SMS OTP (Console Demo)
+// SEND SMS OTP (Console for testing)
 // ============================================
 export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
   console.log('\n' + '='.repeat(50));
@@ -115,7 +115,6 @@ export async function sendInvoiceEmail(
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Plan</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${data.planName}</td></tr>
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Amount</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">₹${data.amount}</td></tr>
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Payment ID</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${data.paymentId}</td></tr>
-              <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Watch Time</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${data.watchTime}</td></tr>
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Start Date</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${data.startDate}</td></tr>
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Valid Until</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${data.endDate}</td></tr>
             </table>
@@ -130,7 +129,7 @@ export async function sendInvoiceEmail(
           <p>Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
         </div>
         <div style="text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee;">
-          <p>System-generated invoice. Do not reply to this email.</p>
+          <p>System-generated invoice. Do not reply.</p>
         </div>
       </div>
     `;

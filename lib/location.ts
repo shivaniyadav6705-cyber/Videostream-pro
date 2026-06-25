@@ -8,7 +8,7 @@ const SOUTH_INDIAN_STATES = [
 ];
 
 // ============================================
-// GET LOCATION FROM IP - Main function
+// GET LOCATION FROM IP
 // ============================================
 export async function getLocationFromIP(ip: string): Promise<{ state: string; city: string; isSouthIndia: boolean }> {
   try {
