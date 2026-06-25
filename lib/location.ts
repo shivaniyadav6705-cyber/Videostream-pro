@@ -7,7 +7,9 @@ const SOUTH_INDIAN_STATES = [
   'Telangana', 'TG', 'TS'
 ];
 
-// Get location from IP
+// ============================================
+// GET LOCATION FROM IP - Main function
+// ============================================
 export async function getLocationFromIP(ip: string): Promise<{ state: string; city: string; isSouthIndia: boolean }> {
   try {
     const response = await fetch('https://ipapi.co/json/');
@@ -29,12 +31,23 @@ export async function getLocationFromIP(ip: string): Promise<{ state: string; ci
   }
 }
 
-// Get OTP method based on location
+// ============================================
+// ALIAS for getUserLocation (for compatibility)
+// ============================================
+export async function getUserLocation(): Promise<{ state: string; city: string; isSouthIndia: boolean }> {
+  return getLocationFromIP('unknown');
+}
+
+// ============================================
+// GET OTP METHOD BASED ON LOCATION
+// ============================================
 export function getOTPMethod(location: { isSouthIndia: boolean }): 'email' | 'phone' {
   return location.isSouthIndia ? 'email' : 'phone';
 }
 
-// Get theme based on location
+// ============================================
+// GET THEME BASED ON LOCATION AND TIME
+// ============================================
 export function getTheme(location: { isSouthIndia: boolean }): 'light' | 'dark' {
   const hour = new Date().getHours();
   const isSpecialTime = hour >= 10 && hour < 12;

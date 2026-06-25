@@ -1,20 +1,19 @@
 import { NextResponse } from 'next/server';
-import { getUserLocation, getTheme, getOTPMethod } from '@/lib/location';
+import { getLocationFromIP, getTheme, getOTPMethod } from '@/lib/location';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const location = await getUserLocation();
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+    const location = await getLocationFromIP(ip);
     const theme = getTheme(location);
     const authMethod = getOTPMethod(location);
-    
-    console.log(`📍 Location API: ${location.city}, ${location.state} - South: ${location.isSouthIndia} - Theme: ${theme} - OTP: ${authMethod}`);
     
     return NextResponse.json({
       city: location.city,
       state: location.state,
       isSouthIndia: location.isSouthIndia,
-      theme: theme,
-      authMethod: authMethod,
+      theme,
+      authMethod,
       message: location.isSouthIndia 
         ? 'South India detected - Light theme & Email OTP' 
         : 'Other region detected - Dark theme & SMS OTP'
