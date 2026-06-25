@@ -1,104 +1,88 @@
 import nodemailer from 'nodemailer';
 
-console.log('📧 Loading email module...');
-
-// Get email credentials
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
-
-console.log('📧 EMAIL_USER:', EMAIL_USER ? '✅ Set' : '❌ Missing');
-console.log('📧 EMAIL_PASS:', EMAIL_PASS ? '✅ Set' : '❌ Missing');
-
-if (!EMAIL_USER || !EMAIL_PASS) {
-  console.error('❌ Email credentials missing in .env.local');
-  console.error('📧 Please add EMAIL_USER and EMAIL_PASS');
-}
-
-// Create transporter
+// Email transporter configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASS,
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
-  // Add these for better reliability
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
 });
 
-// Verify email configuration
-transporter.verify((error) => {
+// Verify email configuration on startup
+transporter.verify((error, success) => {
   if (error) {
-    console.error('❌ Email configuration error:', error.message);
-    console.error('📧 Please check:');
-    console.error('   1. EMAIL_USER is your Gmail address');
-    console.error('   2. EMAIL_PASS is the 16-char App Password');
-    console.error('   3. 2-Step Verification is enabled');
+    console.error('❌ Email configuration error:', error);
   } else {
-    console.log('✅ Email server ready to send emails');
+    console.log('✅ Email server ready to send OTPs');
   }
 });
 
-// ============================================
-// SEND OTP EMAIL (Used for Login)
-// ============================================
-export async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
+// Generate 6-digit OTP
+export function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Send OTP via Email
+export async function sendEmailOTP(email: string, otp: string): Promise<boolean> {
   try {
-    console.log(`📧 Sending OTP to: ${email}`);
-    console.log(`🔑 OTP: ${otp}`);
-
-    if (!email) {
-      console.error('❌ No email provided');
-      return false;
-    }
-
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>OTP Verification - VideoStream Pro</title>
+        <title>VideoStream Pro OTP</title>
       </head>
-      <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px;">
-        <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0;">🎬 VideoStream Pro</h1>
-          </div>
-          <div style="padding: 30px; text-align: center;">
-            <h2 style="color: #333;">🔐 Verification Code</h2>
-            <p style="color: #666;">Your OTP for login is:</p>
-            <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <span style="font-size: 42px; font-weight: bold; letter-spacing: 5px; color: #667eea;">${otp}</span>
+      <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4;">
+        <div style="max-width: 500px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; padding: 30px;">
+            <div style="background: white; border-radius: 10px; padding: 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 20px;">🎬</div>
+              <h2 style="color: #667eea; margin-bottom: 10px;">VideoStream Pro</h2>
+              <h3 style="color: #333;">Login Verification</h3>
+              <p style="color: #666; margin: 20px 0;">Your One-Time Password (OTP) is:</p>
+              <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <span style="font-size: 42px; font-weight: bold; letter-spacing: 8px; color: #667eea;">${otp}</span>
+              </div>
+              <p style="color: #666; font-size: 14px;">This OTP is valid for <strong>10 minutes</strong>.</p>
+              <p style="color: #999; font-size: 12px; margin-top: 20px;">If you didn't request this, please ignore this email.</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+              <p style="color: #999; font-size: 11px;">&copy; 2025 VideoStream Pro. All rights reserved.</p>
             </div>
-            <p style="color: #666; font-size: 14px;">This OTP is valid for <strong>10 minutes</strong>.</p>
-            <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
-          </div>
-          <div style="text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee;">
-            <p>&copy; ${new Date().getFullYear()} VideoStream Pro. All rights reserved.</p>
           </div>
         </div>
       </body>
       </html>
     `;
-
+    
     const info = await transporter.sendMail({
-      from: `"VideoStream Pro" <${EMAIL_USER}>`,
+      from: `"VideoStream Pro" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: '🔐 Your Login OTP - VideoStream Pro',
       html,
     });
-
-    console.log(`✅ OTP email sent to ${email} (Message ID: ${info.messageId})`);
+    
+    console.log(`✅ Email OTP sent to ${email}: ${otp} (Message ID: ${info.messageId})`);
     return true;
   } catch (error: any) {
-    console.error('❌ OTP email failed:', error.message);
-    console.error('Error details:', error);
+    console.error('❌ Email send failed:', error.message);
     return false;
   }
 }
 
+// Send OTP via SMS (Console for demo)
+export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
+  console.log('\n' + '='.repeat(50));
+  console.log(`📱 SMS OTP (DEMO MODE)`);
+  console.log(`📱 To: ${phone}`);
+  console.log(`📱 Your OTP is: ${otp}`);
+  console.log(`📱 Valid for 10 minutes`);
+  console.log('='.repeat(50) + '\n');
+  return true;
+}
+
 // ============================================
-// SEND INVOICE EMAIL (Used for Plan Upgrade)
+// SEND INVOICE EMAIL (For Plan Upgrade)
 // ============================================
 export async function sendInvoiceEmail(
   email: string,
@@ -139,14 +123,14 @@ export async function sendInvoiceEmail(
           .invoice-box table { width: 100%; border-collapse: collapse; }
           .invoice-box td { padding: 8px 0; border-bottom: 1px solid #e9ecef; }
           .invoice-box td:last-child { text-align: right; font-weight: bold; }
-          .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; }
+          .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>🎬 VideoStream Pro</h1>
-            <p>Payment Confirmation & Invoice</p>
+            <p style="color: rgba(255,255,255,0.8);">Payment Confirmation</p>
           </div>
           <div class="content">
             <h2>Hello ${data.username},</h2>
@@ -174,7 +158,7 @@ export async function sendInvoiceEmail(
             <p>Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
           </div>
           <div class="footer">
-            <p>System-generated invoice. Do not reply to this email.</p>
+            <p>System-generated invoice. Do not reply.</p>
           </div>
         </div>
       </body>
@@ -182,7 +166,7 @@ export async function sendInvoiceEmail(
     `;
 
     const info = await transporter.sendMail({
-      from: `"VideoStream Pro" <${EMAIL_USER}>`,
+      from: `"VideoStream Pro" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: `🎬 ${data.planName} - Payment Confirmation & Invoice`,
       html,
@@ -203,21 +187,21 @@ export async function testEmail(email: string): Promise<boolean> {
   try {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h2>✅ Email Configuration Test</h2>
-        <p>Your email is working correctly!</p>
+        <h2>✅ Email Test</h2>
+        <p>Your email is working!</p>
         <p>Sent at: ${new Date().toLocaleString()}</p>
-        <p>From: ${EMAIL_USER}</p>
+        <p>From: ${process.env.EMAIL_USER}</p>
       </div>
     `;
 
-    await transporter.sendMail({
-      from: `"VideoStream Pro" <${EMAIL_USER}>`,
+    const info = await transporter.sendMail({
+      from: `"VideoStream Pro" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: '✅ Email Test - VideoStream Pro',
       html,
     });
 
-    console.log(`✅ Test email sent to ${email}`);
+    console.log(`✅ Test email sent to ${email} (Message ID: ${info.messageId})`);
     return true;
   } catch (error: any) {
     console.error('❌ Test email failed:', error.message);

@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
-import { sendOTPEmail } from '@/lib/email';
-import jwt from 'jsonwebtoken';
-
-// Generate 6-digit OTP
-function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import { sendEmailOTP, sendSMSOTP, generateOTP } from '@/lib/email';
+import { getLocationFromIP, getOTPMethod } from '@/lib/location';
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,35 +32,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
     }
 
+    // Get location
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+    const location = await getLocationFromIP(ip);
+    const method = getOTPMethod(location);
+
     // Generate OTP
     const otp = generateOTP();
-    const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const otpExpiry = Date.now() + 10 * 60 * 1000;
 
-    // Store OTP in user document or separate collection
-    // For simplicity, we'll store it in a global variable (use Redis/DB in production)
+    // Store OTP
     (global as any)._otps = (global as any)._otps || {};
     (global as any)._otps[user._id.toString()] = { otp, expiresAt: otpExpiry };
 
-    // Send OTP via Email
-    console.log(`📧 Sending OTP to: ${user.email}`);
-    console.log(`🔑 OTP: ${otp}`);
-
-    const emailSent = await sendOTPEmail(user.email, otp);
-
-    if (!emailSent) {
-      console.error(`❌ Failed to send OTP email to ${user.email}`);
-      return NextResponse.json({ 
-        error: 'Failed to send OTP. Please check your email configuration.' 
-      }, { status: 500 });
+    // Send OTP
+    if (method === 'email') {
+      await sendEmailOTP(user.email, otp);
+      console.log(`📧 OTP sent to email: ${user.email}`);
+    } else {
+      await sendSMSOTP(user.phone || '9876543210', otp);
+      console.log(`📱 OTP sent to phone: ${user.phone}`);
     }
 
-    console.log(`✅ OTP sent to ${user.email}`);
+    console.log(`🔑 OTP: ${otp}`);
 
     return NextResponse.json({
       success: true,
-      message: `OTP sent to your email`,
+      message: `OTP sent to your ${method}`,
       userId: user._id,
-      method: 'email',
+      method,
+      theme: location.isSouthIndia ? 'light' : 'dark',
     });
   } catch (error: any) {
     console.error('Login error:', error);

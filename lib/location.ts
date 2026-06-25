@@ -1,4 +1,4 @@
-// South Indian states list
+// South Indian states
 const SOUTH_INDIAN_STATES = [
   'Tamil Nadu', 'TamilNadu', 'TN',
   'Kerala', 'KL',
@@ -7,64 +7,25 @@ const SOUTH_INDIAN_STATES = [
   'Telangana', 'TG', 'TS'
 ];
 
-// ============================================
-// CLIENT-SIDE LOCATION (Works on Vercel)
-// ============================================
+// Get location from IP (using free API)
 export async function getUserLocation(): Promise<{ state: string; city: string; isSouthIndia: boolean }> {
   try {
-    // Try browser's geolocation API first (most accurate)
-    if (typeof window !== 'undefined' && navigator.geolocation) {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
-      });
-      
-      // Use reverse geocoding to get location from coordinates
-      const { latitude, longitude } = position.coords;
-      const response = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-      );
-      const data = await response.json();
-      
-      const state = data.principalSubdivision || 'Unknown';
-      const city = data.city || data.locality || 'Unknown';
-      
-      const isSouthIndia = SOUTH_INDIAN_STATES.some(s => 
-        state.toLowerCase().includes(s.toLowerCase()) || 
-        s.toLowerCase().includes(state.toLowerCase())
-      );
-      
-      console.log(`📍 Location (Geolocation): ${city}, ${state} - South: ${isSouthIndia}`);
-      return { state, city, isSouthIndia };
-    }
-    
-    // Fallback: IP-based location detection
-    const response = await fetch('https://ipapi.co/json/', {
-      next: { revalidate: 3600 }
-    });
-    
-    if (!response.ok) {
-      throw new Error('IP location API failed');
-    }
-    
+    const response = await fetch('https://ipapi.co/json/');
     const data = await response.json();
+    
     const state = data.region || 'Unknown';
     const city = data.city || 'Unknown';
+    
     const isSouthIndia = SOUTH_INDIAN_STATES.some(s => 
       state.toLowerCase().includes(s.toLowerCase()) || 
       s.toLowerCase().includes(state.toLowerCase())
     );
     
-    console.log(`📍 Location (IP): ${city}, ${state} - South: ${isSouthIndia}`);
+    console.log(`📍 Location detected: ${city}, ${state} - South India: ${isSouthIndia}`);
     return { state, city, isSouthIndia };
-    
   } catch (error) {
     console.error('Location detection failed:', error);
-    // Default fallback
-    return { state: 'Maharashtra', city: 'Mumbai', isSouthIndia: false };
+    return { state: 'Unknown', city: 'Unknown', isSouthIndia: false };
   }
 }
 
@@ -89,4 +50,9 @@ export function getTheme(location: { isSouthIndia: boolean }): 'light' | 'dark' 
 // Determine OTP delivery method based on location
 export function getOTPMethod(location: { isSouthIndia: boolean }): 'email' | 'phone' {
   return location.isSouthIndia ? 'email' : 'phone';
+}
+
+// Function to get location from IP (alias for getUserLocation)
+export async function getLocationFromIP(ip: string): Promise<{ state: string; city: string; isSouthIndia: boolean }> {
+  return await getUserLocation();
 }

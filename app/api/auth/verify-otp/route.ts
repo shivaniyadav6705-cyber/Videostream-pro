@@ -16,18 +16,18 @@ export async function POST(req: NextRequest) {
     
     if (!storedOTP) {
       console.log(`❌ No OTP found for user: ${userId}`);
-      return NextResponse.json({ error: 'No OTP requested' }, { status: 401 });
+      return NextResponse.json({ error: 'No OTP requested. Please login again.' }, { status: 401 });
     }
 
     if (Date.now() > storedOTP.expiresAt) {
       console.log(`❌ OTP expired for user: ${userId}`);
       delete (global as any)._otps[userId];
-      return NextResponse.json({ error: 'OTP expired' }, { status: 401 });
+      return NextResponse.json({ error: 'OTP expired. Please request a new one.' }, { status: 401 });
     }
 
     if (storedOTP.otp !== otp) {
       console.log(`❌ Invalid OTP for user: ${userId}`);
-      return NextResponse.json({ error: 'Invalid OTP' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid OTP. Please try again.' }, { status: 401 });
     }
 
     // OTP verified - generate token
@@ -55,6 +55,8 @@ export async function POST(req: NextRequest) {
         username: user.username,
         email: user.email,
         plan: user.plan,
+        planStartDate: user.planStartDate,
+        planEndDate: user.planEndDate,
       },
     });
   } catch (error: any) {
