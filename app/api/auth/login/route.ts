@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import { sendEmailOTP, sendSMSOTP, generateOTP } from '@/lib/email';
-import { getLocationFromIP, getOTPMethod } from '@/lib/location';
+import { getLocationFromIP, getOTPMethod, getTheme } from '@/lib/location';
+
+// Store OTPs globally
+declare global {
+  var _otps: Record<string, { otp: string; expiresAt: number }>;
+}
+global._otps = global._otps || {};
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,32 +42,39 @@ export async function POST(req: NextRequest) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
     const location = await getLocationFromIP(ip);
     const method = getOTPMethod(location);
+    const theme = getTheme(location);
 
     // Generate OTP
     const otp = generateOTP();
     const otpExpiry = Date.now() + 10 * 60 * 1000;
 
     // Store OTP
-    (global as any)._otps = (global as any)._otps || {};
-    (global as any)._otps[user._id.toString()] = { otp, expiresAt: otpExpiry };
+    const userId = user._id.toString();
+    global._otps[userId] = { otp, expiresAt: otpExpiry };
 
-    // Send OTP
+    console.log(`📝 OTP stored for user: ${userId}`);
+    console.log(`🔑 OTP: ${otp}`);
+    console.log(`📧 Method: ${method}`);
+    console.log(`⏰ Expires at: ${new Date(otpExpiry).toLocaleString()}`);
+
+    // Send OTP based on location
+    let otpSent = false;
     if (method === 'email') {
-      await sendEmailOTP(user.email, otp);
-      console.log(`📧 OTP sent to email: ${user.email}`);
+      otpSent = await sendEmailOTP(user.email, otp);
     } else {
-      await sendSMSOTP(user.phone || '9876543210', otp);
-      console.log(`📱 OTP sent to phone: ${user.phone}`);
+      otpSent = await sendSMSOTP(user.phone || '9876543210', otp);
     }
 
-    console.log(`🔑 OTP: ${otp}`);
+    console.log(`📧 OTP sent: ${otpSent}`);
 
     return NextResponse.json({
       success: true,
       message: `OTP sent to your ${method}`,
-      userId: user._id,
+      userId: userId,
       method,
-      theme: location.isSouthIndia ? 'light' : 'dark',
+      theme,
+      otp: otp, // FOR TESTING ONLY - REMOVE IN PRODUCTION
+      expiresAt: otpExpiry,
     });
   } catch (error: any) {
     console.error('Login error:', error);

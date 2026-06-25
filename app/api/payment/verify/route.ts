@@ -10,19 +10,19 @@ const PLAN_DETAILS: Record<string, any> = {
     name: 'Bronze Plan',
     watchTime: '7 minutes per day',
     price: 10,
-    features: ['7 minutes daily watch time', 'SD Quality (480p)', 'Basic Support', '1 Device at a time'],
+    features: ['7 minutes daily', 'SD Quality (480p)', 'Basic Support', '1 Device at a time'],
   },
   silver: {
     name: 'Silver Plan',
     watchTime: '10 minutes per day',
     price: 50,
-    features: ['10 minutes daily watch time', 'HD Quality (720p)', 'Priority Support', '2 Devices at a time', 'No Ads'],
+    features: ['10 minutes daily', 'HD Quality (720p)', 'Priority Support', '2 Devices', 'No Ads'],
   },
   gold: {
     name: 'Gold Plan',
     watchTime: 'Unlimited',
     price: 100,
-    features: ['Unlimited watch time', '4K Quality', '24/7 Support', '4 Devices at a time', 'No Ads', 'Exclusive Content'],
+    features: ['Unlimited watch time', '4K Quality', '24/7 Support', '4 Devices', 'No Ads', 'Exclusive Content'],
   },
 };
 
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    // Find and update user
+    // Update user
     const user = await User.findById(decoded.userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });

@@ -3,6 +3,11 @@ import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import jwt from 'jsonwebtoken';
 
+declare global {
+  var _otps: Record<string, { otp: string; expiresAt: number }>;
+}
+global._otps = global._otps || {};
+
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
@@ -11,23 +16,40 @@ export async function POST(req: NextRequest) {
     console.log(`🔐 OTP verification for user: ${userId}`);
     console.log(`🔑 OTP entered: ${otp}`);
 
+    if (!userId || !otp) {
+      return NextResponse.json({ error: 'UserId and OTP are required' }, { status: 400 });
+    }
+
     // Get stored OTP
-    const storedOTP = (global as any)._otps?.[userId];
+    const storedData = global._otps[userId];
     
-    if (!storedOTP) {
+    console.log(`📝 Stored OTP:`, storedData);
+
+    if (!storedData) {
       console.log(`❌ No OTP found for user: ${userId}`);
-      return NextResponse.json({ error: 'No OTP requested. Please login again.' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'No OTP requested. Please login again.' 
+      }, { status: 401 });
     }
 
-    if (Date.now() > storedOTP.expiresAt) {
+    // Check expiry
+    const now = Date.now();
+    if (now > storedData.expiresAt) {
       console.log(`❌ OTP expired for user: ${userId}`);
-      delete (global as any)._otps[userId];
-      return NextResponse.json({ error: 'OTP expired. Please request a new one.' }, { status: 401 });
+      delete global._otps[userId];
+      return NextResponse.json({ 
+        error: 'OTP expired. Please request a new one.' 
+      }, { status: 401 });
     }
 
-    if (storedOTP.otp !== otp) {
+    // Check OTP match
+    if (storedData.otp !== otp) {
       console.log(`❌ Invalid OTP for user: ${userId}`);
-      return NextResponse.json({ error: 'Invalid OTP. Please try again.' }, { status: 401 });
+      console.log(`🔑 Expected: ${storedData.otp}`);
+      console.log(`🔑 Received: ${otp}`);
+      return NextResponse.json({ 
+        error: `Invalid OTP. Please try again.` 
+      }, { status: 401 });
     }
 
     // OTP verified - generate token
@@ -37,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Clear OTP
-    delete (global as any)._otps[userId];
+    delete global._otps[userId];
 
     const token = jwt.sign(
       { userId: user._id },
@@ -55,8 +77,6 @@ export async function POST(req: NextRequest) {
         username: user.username,
         email: user.email,
         plan: user.plan,
-        planStartDate: user.planStartDate,
-        planEndDate: user.planEndDate,
       },
     });
   } catch (error: any) {
