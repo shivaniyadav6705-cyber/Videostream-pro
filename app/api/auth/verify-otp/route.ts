@@ -1,38 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserLocation, getTheme } from '@/lib/location';
-
-declare global {
-  var _users: any[];
-  var _otps: any[];
-}
-global._users = global._users || [];
-global._otps = global._otps || [];
+import { connectDB } from '@/lib/db';
+import User from '@/models/User';
+import jwt from 'jsonwebtoken';
 
 export async function POST(req: NextRequest) {
   try {
+    await connectDB();
     const { userId, otp } = await req.json();
+
+    console.log(`🔐 OTP verification for user: ${userId}`);
+    console.log(`🔑 OTP entered: ${otp}`);
+
+    // Get stored OTP
+    const storedOTP = (global as any)._otps?.[userId];
     
-    const otpRecord = global._otps.find((o: any) => o.userId === userId && o.otp === otp && o.expiresAt > Date.now());
-    
-    if (!otpRecord) {
-      return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 401 });
+    if (!storedOTP) {
+      console.log(`❌ No OTP found for user: ${userId}`);
+      return NextResponse.json({ error: 'No OTP requested' }, { status: 401 });
     }
-    
-    // Clear used OTP
-    global._otps = global._otps.filter((o: any) => o.userId !== userId);
-    
-    const user = global._users.find((u: any) => u.id === userId);
-    const location = await getUserLocation();
-    const theme = getTheme(location);
-    const token = Buffer.from(JSON.stringify({ userId: user.id, email: user.email })).toString('base64');
-    
-    console.log(`✅ User ${user.username} verified via ${otpRecord.method}`);
-    
+
+    if (Date.now() > storedOTP.expiresAt) {
+      console.log(`❌ OTP expired for user: ${userId}`);
+      delete (global as any)._otps[userId];
+      return NextResponse.json({ error: 'OTP expired' }, { status: 401 });
+    }
+
+    if (storedOTP.otp !== otp) {
+      console.log(`❌ Invalid OTP for user: ${userId}`);
+      return NextResponse.json({ error: 'Invalid OTP' }, { status: 401 });
+    }
+
+    // OTP verified - generate token
+    const user = await User.findById(userId);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Clear OTP
+    delete (global as any)._otps[userId];
+
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
+    );
+
+    console.log(`✅ User logged in: ${user.username}`);
+
     return NextResponse.json({
       success: true,
       token,
-      user: { id: user.id, username: user.username, email: user.email, plan: user.plan },
-      theme,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        plan: user.plan,
+      },
     });
   } catch (error: any) {
     console.error('OTP verification error:', error);

@@ -1,29 +1,104 @@
 import nodemailer from 'nodemailer';
 
-// Create transporter with better configuration
+console.log('📧 Loading email module...');
+
+// Get email credentials
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
+
+console.log('📧 EMAIL_USER:', EMAIL_USER ? '✅ Set' : '❌ Missing');
+console.log('📧 EMAIL_PASS:', EMAIL_PASS ? '✅ Set' : '❌ Missing');
+
+if (!EMAIL_USER || !EMAIL_PASS) {
+  console.error('❌ Email credentials missing in .env.local');
+  console.error('📧 Please add EMAIL_USER and EMAIL_PASS');
+}
+
+// Create transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
   },
-  // Add these for reliability
+  // Add these for better reliability
   connectionTimeout: 30000,
   greetingTimeout: 30000,
 });
 
-// Verify email configuration on startup
+// Verify email configuration
 transporter.verify((error) => {
   if (error) {
-    console.error('❌ Email configuration error:', error);
-    console.error('📧 Please check EMAIL_USER and EMAIL_PASS in .env.local');
+    console.error('❌ Email configuration error:', error.message);
+    console.error('📧 Please check:');
+    console.error('   1. EMAIL_USER is your Gmail address');
+    console.error('   2. EMAIL_PASS is the 16-char App Password');
+    console.error('   3. 2-Step Verification is enabled');
   } else {
     console.log('✅ Email server ready to send emails');
   }
 });
 
 // ============================================
-// SEND INVOICE EMAIL
+// SEND OTP EMAIL (Used for Login)
+// ============================================
+export async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
+  try {
+    console.log(`📧 Sending OTP to: ${email}`);
+    console.log(`🔑 OTP: ${otp}`);
+
+    if (!email) {
+      console.error('❌ No email provided');
+      return false;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>OTP Verification - VideoStream Pro</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px;">
+        <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0;">🎬 VideoStream Pro</h1>
+          </div>
+          <div style="padding: 30px; text-align: center;">
+            <h2 style="color: #333;">🔐 Verification Code</h2>
+            <p style="color: #666;">Your OTP for login is:</p>
+            <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <span style="font-size: 42px; font-weight: bold; letter-spacing: 5px; color: #667eea;">${otp}</span>
+            </div>
+            <p style="color: #666; font-size: 14px;">This OTP is valid for <strong>10 minutes</strong>.</p>
+            <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+          </div>
+          <div style="text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee;">
+            <p>&copy; ${new Date().getFullYear()} VideoStream Pro. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const info = await transporter.sendMail({
+      from: `"VideoStream Pro" <${EMAIL_USER}>`,
+      to: email,
+      subject: '🔐 Your Login OTP - VideoStream Pro',
+      html,
+    });
+
+    console.log(`✅ OTP email sent to ${email} (Message ID: ${info.messageId})`);
+    return true;
+  } catch (error: any) {
+    console.error('❌ OTP email failed:', error.message);
+    console.error('Error details:', error);
+    return false;
+  }
+}
+
+// ============================================
+// SEND INVOICE EMAIL (Used for Plan Upgrade)
 // ============================================
 export async function sendInvoiceEmail(
   email: string,
@@ -40,13 +115,13 @@ export async function sendInvoiceEmail(
   }
 ): Promise<boolean> {
   try {
-    if (!email) {
-      console.error('❌ No email address provided');
-      return false;
-    }
-
     console.log(`📧 Sending invoice to: ${email}`);
     console.log(`📄 Plan: ${data.planName}, Amount: ₹${data.amount}`);
+
+    if (!email) {
+      console.error('❌ No email provided');
+      return false;
+    }
 
     const html = `
       <!DOCTYPE html>
@@ -56,19 +131,15 @@ export async function sendInvoiceEmail(
         <title>Payment Confirmation - VideoStream Pro</title>
         <style>
           body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; }
           .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; }
-          .header h1 { color: white; margin: 0; font-size: 28px; }
-          .header p { color: rgba(255,255,255,0.8); margin: 5px 0 0; }
+          .header h1 { color: white; margin: 0; }
           .content { padding: 30px; }
-          .invoice-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e9ecef; }
+          .invoice-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
           .invoice-box table { width: 100%; border-collapse: collapse; }
-          .invoice-box tr { border-bottom: 1px solid #e9ecef; }
-          .invoice-box td { padding: 10px 0; }
+          .invoice-box td { padding: 8px 0; border-bottom: 1px solid #e9ecef; }
           .invoice-box td:last-child { text-align: right; font-weight: bold; }
-          .btn { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-          .btn:hover { background: #5a6fd6; }
-          .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee; }
+          .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; }
         </style>
       </head>
       <body>
@@ -79,9 +150,9 @@ export async function sendInvoiceEmail(
           </div>
           <div class="content">
             <h2>Hello ${data.username},</h2>
-            <p>Thank you for upgrading to the <strong>${data.planName}</strong>! Your payment has been successfully processed.</p>
+            <p>Thank you for upgrading to <strong>${data.planName}</strong>!</p>
             <div class="invoice-box">
-              <h3 style="margin-top: 0;">📄 Invoice Details</h3>
+              <h3>📄 Invoice Details</h3>
               <table>
                 <tr><td>Invoice Number</td><td>#INV-${Date.now().toString().slice(-8)}</td></tr>
                 <tr><td>Date</td><td>${new Date().toLocaleDateString()}</td></tr>
@@ -98,13 +169,12 @@ export async function sendInvoiceEmail(
               <ul>${data.features.map(f => `<li>${f}</li>`).join('')}</ul>
             </div>
             <div style="text-align: center; margin: 20px 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" class="btn">Go to VideoStream Pro</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="background: #667eea; color: white; padding: 10px 25px; text-decoration: none; border-radius: 5px;">Go to VideoStream Pro</a>
             </div>
-            <p style="color: #666;">Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
+            <p>Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
           </div>
           <div class="footer">
-            <p>This is a system-generated invoice. Please do not reply to this email.</p>
-            <p>&copy; ${new Date().getFullYear()} VideoStream Pro. All rights reserved.</p>
+            <p>System-generated invoice. Do not reply to this email.</p>
           </div>
         </div>
       </body>
@@ -112,7 +182,7 @@ export async function sendInvoiceEmail(
     `;
 
     const info = await transporter.sendMail({
-      from: `"VideoStream Pro" <${process.env.EMAIL_USER}>`,
+      from: `"VideoStream Pro" <${EMAIL_USER}>`,
       to: email,
       subject: `🎬 ${data.planName} - Payment Confirmation & Invoice`,
       html,
@@ -127,36 +197,30 @@ export async function sendInvoiceEmail(
 }
 
 // ============================================
-// SEND OTP EMAIL
+// TEST EMAIL FUNCTION
 // ============================================
-export async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
+export async function testEmail(email: string): Promise<boolean> {
   try {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; padding: 30px;">
-          <div style="background: white; border-radius: 10px; padding: 30px; text-align: center;">
-            <h2 style="color: #667eea;">🔐 Verification Code</h2>
-            <p style="color: #333;">Your OTP for login is:</p>
-            <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <span style="font-size: 36px; font-weight: bold; letter-spacing: 5px; color: #667eea;">${otp}</span>
-            </div>
-            <p style="color: #666; font-size: 14px;">Valid for 10 minutes.</p>
-            <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
-          </div>
-        </div>
+        <h2>✅ Email Configuration Test</h2>
+        <p>Your email is working correctly!</p>
+        <p>Sent at: ${new Date().toLocaleString()}</p>
+        <p>From: ${EMAIL_USER}</p>
       </div>
     `;
 
     await transporter.sendMail({
-      from: `"VideoStream Pro" <${process.env.EMAIL_USER}>`,
+      from: `"VideoStream Pro" <${EMAIL_USER}>`,
       to: email,
-      subject: '🔐 Your Login OTP - VideoStream Pro',
+      subject: '✅ Email Test - VideoStream Pro',
       html,
     });
-    console.log(`✅ OTP email sent to ${email}`);
+
+    console.log(`✅ Test email sent to ${email}`);
     return true;
   } catch (error: any) {
-    console.error('❌ OTP email failed:', error.message);
+    console.error('❌ Test email failed:', error.message);
     return false;
   }
 }
