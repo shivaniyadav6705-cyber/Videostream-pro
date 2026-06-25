@@ -13,32 +13,19 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const { userId, otp } = await req.json();
 
-    console.log(`🔐 OTP verification for user: ${userId}`);
-    console.log(`🔑 OTP entered: ${otp}`);
-
-    if (!userId || !otp) {
-      return NextResponse.json({ error: 'UserId and OTP are required' }, { status: 400 });
-    }
-
     const storedData = global._otps[userId];
     
     if (!storedData) {
-      console.log(`❌ No OTP found for user: ${userId}`);
-      return NextResponse.json({ error: 'No OTP requested. Please login again.' }, { status: 401 });
+      return NextResponse.json({ error: 'No OTP found. Please login again.' }, { status: 401 });
     }
 
-    const now = Date.now();
-    if (now > storedData.expiresAt) {
-      console.log(`❌ OTP expired for user: ${userId}`);
+    if (Date.now() > storedData.expiresAt) {
       delete global._otps[userId];
-      return NextResponse.json({ error: 'OTP expired. Please request a new one.' }, { status: 401 });
+      return NextResponse.json({ error: 'OTP expired. Please login again.' }, { status: 401 });
     }
 
     if (storedData.otp !== otp) {
-      console.log(`❌ Invalid OTP for user: ${userId}`);
-      console.log(`🔑 Expected: ${storedData.otp}`);
-      console.log(`🔑 Received: ${otp}`);
-      return NextResponse.json({ error: `Invalid OTP. Please try again.` }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid OTP. Please try again.' }, { status: 401 });
     }
 
     const user = await User.findById(userId);
@@ -48,13 +35,7 @@ export async function POST(req: NextRequest) {
 
     delete global._otps[userId];
 
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
-    );
-
-    console.log(`✅ User logged in: ${user.username}`);
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
 
     return NextResponse.json({
       success: true,
