@@ -3,9 +3,10 @@ import mongoose from 'mongoose';
 const MONGODB_URI = process.env.MONGODB_URI!;
 
 if (!MONGODB_URI) {
-  throw new Error('Please define MONGODB_URI environment variable');
+  throw new Error('Please define MONGODB_URI in .env.local');
 }
 
+// Cache connection across requests
 let cached = (global as any).mongoose;
 
 if (!cached) {
@@ -14,6 +15,7 @@ if (!cached) {
 
 export async function connectDB() {
   if (cached.conn) {
+    console.log('✅ Using cached MongoDB connection');
     return cached.conn;
   }
 
@@ -24,13 +26,18 @@ export async function connectDB() {
       socketTimeoutMS: 45000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log('✅ MongoDB connected successfully');
-      return mongoose;
-    }).catch((err) => {
-      console.error('❌ MongoDB connection error:', err);
-      throw err;
-    });
+    console.log('🔄 Connecting to MongoDB Atlas...');
+    
+    cached.promise = mongoose.connect(MONGODB_URI, opts)
+      .then((mongoose) => {
+        console.log('✅ MongoDB Atlas connected successfully!');
+        return mongoose;
+      })
+      .catch((err) => {
+        console.error('❌ MongoDB connection error:', err.message);
+        cached.promise = null;
+        throw err;
+      });
   }
 
   try {
