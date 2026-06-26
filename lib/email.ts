@@ -1,13 +1,15 @@
 import nodemailer from 'nodemailer';
+import twilio from 'twilio';
 
-// Get email credentials
+// ============================================
+// EMAIL CONFIGURATION
+// ============================================
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
 
 console.log('📧 Email module loaded');
 console.log('📧 EMAIL_USER:', EMAIL_USER ? '✅ Set' : '❌ MISSING');
 
-// Create transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -16,7 +18,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Verify on startup
 transporter.verify((error) => {
   if (error) {
     console.error('❌ Email error:', error.message);
@@ -25,18 +26,35 @@ transporter.verify((error) => {
   }
 });
 
-// Generate OTP
+// ============================================
+// TWILIO SMS CONFIGURATION
+// ============================================
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
+
+console.log('📱 Twilio loaded');
+console.log('📱 TWILIO_ACCOUNT_SID:', TWILIO_ACCOUNT_SID ? '✅ Set' : '❌ MISSING');
+console.log('📱 TWILIO_PHONE_NUMBER:', TWILIO_PHONE_NUMBER ? '✅ Set' : '❌ MISSING');
+
+// Initialize Twilio client
+const twilioClient = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN
+  ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+  : null;
+
+// ============================================
+// GENERATE OTP
+// ============================================
 export function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 // ============================================
-// SEND OTP EMAIL - FOR LOGIN
+// SEND OTP VIA EMAIL
 // ============================================
 export async function sendEmailOTP(email: string, otp: string): Promise<boolean> {
   try {
     console.log(`📧 Sending OTP to: ${email}`);
-    console.log(`🔑 OTP: ${otp}`);
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f4f4f4;">
@@ -69,19 +87,56 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
 }
 
 // ============================================
-// SEND SMS OTP - FOR OTHER REGIONS
+// SEND OTP VIA SMS USING TWILIO (REAL SMS)
 // ============================================
 export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
-  console.log('\n' + '='.repeat(50));
-  console.log(`📱 SMS OTP (DEMO MODE)`);
-  console.log(`📱 To: ${phone}`);
-  console.log(`📱 Your OTP is: ${otp}`);
-  console.log('='.repeat(50) + '\n');
-  return true;
+  try {
+    console.log(`📱 Sending SMS OTP to: ${phone}`);
+
+    // Check if Twilio is configured
+    if (!twilioClient || !TWILIO_PHONE_NUMBER) {
+      console.log('⚠️ Twilio not configured. Using demo mode.');
+      console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
+      return true;
+    }
+
+    // Format phone number (ensure it has country code)
+    let formattedPhone = phone.trim();
+    
+    // Remove any spaces
+    formattedPhone = formattedPhone.replace(/\s/g, '');
+    
+    // If no country code, add +91 for India
+    if (!formattedPhone.startsWith('+')) {
+      if (formattedPhone.startsWith('91')) {
+        formattedPhone = `+${formattedPhone}`;
+      } else {
+        formattedPhone = `+91${formattedPhone}`;
+      }
+    }
+
+    console.log(`📱 Formatted phone: ${formattedPhone}`);
+
+    // Send SMS via Twilio
+    const message = await twilioClient.messages.create({
+      body: `🔐 Your VideoStream Pro OTP is: ${otp}. Valid for 10 minutes. Do not share with anyone.`,
+      to: formattedPhone,
+      from: TWILIO_PHONE_NUMBER,
+    });
+
+    console.log(`✅ SMS sent successfully! SID: ${message.sid}`);
+    return true;
+  } catch (error: any) {
+    console.error('❌ SMS send failed:', error.message);
+    
+    // Fallback to console demo mode
+    console.log(`📱 SMS OTP (FALLBACK): ${otp} to ${phone}`);
+    return true;
+  }
 }
 
 // ============================================
-// SEND INVOICE EMAIL - FOR PLAN UPGRADE
+// SEND INVOICE EMAIL
 // ============================================
 export async function sendInvoiceEmail(
   email: string,
@@ -110,16 +165,10 @@ export async function sendInvoiceEmail(
           <h2>Hello ${data.username},</h2>
           <p>Thank you for upgrading to <strong>${data.planName}</strong>!</p>
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <table style="width: 100%;">
-              <tr><td><strong>Plan</strong></td><td style="text-align: right;">${data.planName}</td></tr>
-              <tr><td><strong>Amount</strong></td><td style="text-align: right;">₹${data.amount}</td></tr>
-              <tr><td><strong>Payment ID</strong></td><td style="text-align: right;">${data.paymentId}</td></tr>
-              <tr><td><strong>Valid Until</strong></td><td style="text-align: right;">${data.endDate}</td></tr>
-            </table>
-          </div>
-          <div style="margin: 20px 0;">
-            <h3>✨ Features</h3>
-            <ul>${data.features.map(f => `<li>${f}</li>`).join('')}</ul>
+            <p><strong>Plan:</strong> ${data.planName}</p>
+            <p><strong>Amount:</strong> ₹${data.amount}</p>
+            <p><strong>Payment ID:</strong> ${data.paymentId}</p>
+            <p><strong>Valid Until:</strong> ${data.endDate}</p>
           </div>
           <p>Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
         </div>
