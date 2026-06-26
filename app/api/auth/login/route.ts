@@ -31,19 +31,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
     }
 
+    // Get location
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
     const location = await getLocationFromIP(ip);
     const method = getOTPMethod(location);
 
+    // Generate OTP
     const otp = generateOTP();
     const userId = user._id.toString();
-    global._otps[userId] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    global._otps[userId] = { otp, expiresAt };
 
     console.log(`🔐 Login: ${emailOrPhone}`);
     console.log(`📍 Location: ${location.city}, ${location.state}`);
     console.log(`📧 Method: ${method}`);
     console.log(`🔑 OTP: ${otp}`);
 
+    // Send OTP
     if (method === 'email') {
       await sendEmailOTP(user.email, otp);
     } else {

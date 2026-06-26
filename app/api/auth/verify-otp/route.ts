@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     }
 
     const storedData = global._otps[userId];
+
     if (!storedData) {
       return NextResponse.json({ error: 'No OTP found. Please login again.' }, { status: 401 });
     }
