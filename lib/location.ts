@@ -22,3 +22,10 @@ export async function getLocationFromIP(ip: string): Promise<{ state: string; ci
 export function getOTPMethod(location: { isSouthIndia: boolean }): 'email' | 'phone' {
   return location.isSouthIndia ? 'email' : 'phone';
 }
+
+export function getTheme(location: { isSouthIndia: boolean }): 'light' | 'dark' {
+  const hour = new Date().getHours();
+  const isSpecialTime = hour >= 10 && hour < 12;
+  if (location.isSouthIndia && isSpecialTime) return 'light';
+  return 'dark';
+}

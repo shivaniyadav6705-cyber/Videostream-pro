@@ -9,6 +9,7 @@ const EMAIL_PASS = process.env.EMAIL_PASS;
 
 console.log('📧 Email module loaded');
 console.log('📧 EMAIL_USER:', EMAIL_USER ? '✅ Set' : '❌ MISSING');
+console.log('📧 EMAIL_PASS:', EMAIL_PASS ? '✅ Set' : '❌ MISSING');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -34,13 +35,20 @@ const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
 console.log('📱 Twilio loaded');
-console.log('📱 TWILIO_ACCOUNT_SID:', TWILIO_ACCOUNT_SID ? '✅ Set' : '❌ MISSING');
+console.log('📱 TWILIO_ACCOUNT_SID:', TWILIO_ACCOUNT_SID ? `✅ ${TWILIO_ACCOUNT_SID.substring(0, 10)}...` : '❌ MISSING');
+console.log('📱 TWILIO_AUTH_TOKEN:', TWILIO_AUTH_TOKEN ? '✅ Set' : '❌ MISSING');
 console.log('📱 TWILIO_PHONE_NUMBER:', TWILIO_PHONE_NUMBER ? '✅ Set' : '❌ MISSING');
 
 // Initialize Twilio client
-const twilioClient = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN
-  ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-  : null;
+let twilioClient: any = null;
+if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+  try {
+    twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    console.log('✅ Twilio client initialized');
+  } catch (error: any) {
+    console.error('❌ Twilio init error:', error.message);
+  }
+}
 
 // ============================================
 // GENERATE OTP
@@ -54,7 +62,8 @@ export function generateOTP(): string {
 // ============================================
 export async function sendEmailOTP(email: string, otp: string): Promise<boolean> {
   try {
-    console.log(`📧 Sending OTP to: ${email}`);
+    console.log(`📧 Sending OTP to email: ${email}`);
+    console.log(`🔑 OTP: ${otp}`);
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f4f4f4;">
@@ -87,26 +96,22 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
 }
 
 // ============================================
-// SEND OTP VIA SMS USING TWILIO (REAL SMS)
+// SEND OTP VIA SMS (TWILIO)
 // ============================================
 export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
   try {
     console.log(`📱 Sending SMS OTP to: ${phone}`);
+    console.log(`🔑 OTP: ${otp}`);
 
-    // Check if Twilio is configured
+    // If Twilio not configured, use demo mode
     if (!twilioClient || !TWILIO_PHONE_NUMBER) {
       console.log('⚠️ Twilio not configured. Using demo mode.');
       console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
       return true;
     }
 
-    // Format phone number (ensure it has country code)
-    let formattedPhone = phone.trim();
-    
-    // Remove any spaces
-    formattedPhone = formattedPhone.replace(/\s/g, '');
-    
-    // If no country code, add +91 for India
+    // Format phone number
+    let formattedPhone = phone.trim().replace(/\s/g, '');
     if (!formattedPhone.startsWith('+')) {
       if (formattedPhone.startsWith('91')) {
         formattedPhone = `+${formattedPhone}`;
@@ -117,26 +122,23 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
 
     console.log(`📱 Formatted phone: ${formattedPhone}`);
 
-    // Send SMS via Twilio
     const message = await twilioClient.messages.create({
-      body: `🔐 Your VideoStream Pro OTP is: ${otp}. Valid for 10 minutes. Do not share with anyone.`,
+      body: `🔐 Your VideoStream Pro OTP is: ${otp}. Valid for 10 minutes.`,
       to: formattedPhone,
       from: TWILIO_PHONE_NUMBER,
     });
 
-    console.log(`✅ SMS sent successfully! SID: ${message.sid}`);
+    console.log(`✅ SMS sent! SID: ${message.sid}`);
     return true;
   } catch (error: any) {
     console.error('❌ SMS send failed:', error.message);
-    
-    // Fallback to console demo mode
     console.log(`📱 SMS OTP (FALLBACK): ${otp} to ${phone}`);
     return true;
   }
 }
 
 // ============================================
-// SEND INVOICE EMAIL
+// SEND INVOICE EMAIL (PLAN UPGRADE)
 // ============================================
 export async function sendInvoiceEmail(
   email: string,
@@ -154,31 +156,70 @@ export async function sendInvoiceEmail(
 ): Promise<boolean> {
   try {
     console.log(`📧 Sending invoice to: ${email}`);
+    console.log(`📄 Plan: ${data.planName}, Amount: ₹${data.amount}`);
 
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white;">🎬 VideoStream Pro</h1>
-          <p style="color: rgba(255,255,255,0.8);">Payment Confirmation</p>
-        </div>
-        <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
-          <h2>Hello ${data.username},</h2>
-          <p>Thank you for upgrading to <strong>${data.planName}</strong>!</p>
-          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Plan:</strong> ${data.planName}</p>
-            <p><strong>Amount:</strong> ₹${data.amount}</p>
-            <p><strong>Payment ID:</strong> ${data.paymentId}</p>
-            <p><strong>Valid Until:</strong> ${data.endDate}</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Payment Confirmation - VideoStream Pro</title>
+        <style>
+          body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; }
+          .header h1 { color: white; margin: 0; }
+          .content { padding: 30px; }
+          .invoice-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .invoice-box table { width: 100%; border-collapse: collapse; }
+          .invoice-box td { padding: 8px 0; border-bottom: 1px solid #e9ecef; }
+          .invoice-box td:last-child { text-align: right; font-weight: bold; }
+          .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎬 VideoStream Pro</h1>
+            <p>Payment Confirmation & Invoice</p>
           </div>
-          <p>Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
+          <div class="content">
+            <h2>Hello ${data.username},</h2>
+            <p>Thank you for upgrading to <strong>${data.planName}</strong>!</p>
+            <div class="invoice-box">
+              <h3>📄 Invoice Details</h3>
+              <table>
+                <tr><td>Invoice Number</td><td>#INV-${Date.now().toString().slice(-8)}</td></tr>
+                <tr><td>Date</td><td>${new Date().toLocaleDateString()}</td></tr>
+                <tr><td>Plan</td><td>${data.planName}</td></tr>
+                <tr><td>Amount</td><td>₹${data.amount}</td></tr>
+                <tr><td>Payment ID</td><td>${data.paymentId}</td></tr>
+                <tr><td>Watch Time</td><td>${data.watchTime}</td></tr>
+                <tr><td>Start Date</td><td>${data.startDate}</td></tr>
+                <tr><td>Valid Until</td><td>${data.endDate}</td></tr>
+              </table>
+            </div>
+            <div style="margin: 20px 0;">
+              <h3>✨ Plan Features</h3>
+              <ul>${data.features.map(f => `<li>${f}</li>`).join('')}</ul>
+            </div>
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="background: #667eea; color: white; padding: 10px 25px; text-decoration: none; border-radius: 5px;">Go to VideoStream Pro</a>
+            </div>
+            <p>Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
+          </div>
+          <div class="footer">
+            <p>System-generated invoice. Do not reply.</p>
+          </div>
         </div>
-      </div>
+      </body>
+      </html>
     `;
 
     const info = await transporter.sendMail({
       from: `"VideoStream Pro" <${EMAIL_USER}>`,
       to: email,
-      subject: `🎬 ${data.planName} - Payment Confirmation`,
+      subject: `🎬 ${data.planName} - Payment Confirmation & Invoice`,
       html,
     });
 

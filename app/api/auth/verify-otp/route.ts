@@ -13,8 +13,11 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const { userId, otp } = await req.json();
 
+    if (!userId || !otp) {
+      return NextResponse.json({ error: 'UserId and OTP required' }, { status: 400 });
+    }
+
     const storedData = global._otps[userId];
-    
     if (!storedData) {
       return NextResponse.json({ error: 'No OTP found. Please login again.' }, { status: 401 });
     }
@@ -48,7 +51,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('OTP verification error:', error);
+    console.error('Verify OTP error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

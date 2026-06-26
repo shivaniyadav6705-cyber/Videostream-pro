@@ -14,12 +14,16 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const { emailOrPhone, password } = await req.json();
 
+    if (!emailOrPhone || !password) {
+      return NextResponse.json({ error: 'Email/Phone and password required' }, { status: 400 });
+    }
+
     const user = await User.findOne({
       $or: [{ email: emailOrPhone }, { phone: emailOrPhone }],
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 });
+      return NextResponse.json({ error: 'User not found. Please register first.' }, { status: 401 });
     }
 
     const isMatch = await user.comparePassword(password);
@@ -35,8 +39,10 @@ export async function POST(req: NextRequest) {
     const userId = user._id.toString();
     global._otps[userId] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
 
-    console.log(`🔑 OTP: ${otp}`);
+    console.log(`🔐 Login: ${emailOrPhone}`);
+    console.log(`📍 Location: ${location.city}, ${location.state}`);
     console.log(`📧 Method: ${method}`);
+    console.log(`🔑 OTP: ${otp}`);
 
     if (method === 'email') {
       await sendEmailOTP(user.email, otp);
