@@ -1,8 +1,7 @@
 import { Resend } from 'resend';
-import nodemailer from 'nodemailer';
 
 // ============================================
-// RESEND CONFIGURATION (PRIMARY - WORKS ON VERCEL)
+// RESEND CONFIGURATION (ONLY - WORKS ON VERCEL)
 // ============================================
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
@@ -12,29 +11,17 @@ console.log('📧 RESEND_API_KEY:', RESEND_API_KEY ? '✅ Set' : '❌ MISSING');
 console.log('📧 FROM_EMAIL:', FROM_EMAIL);
 
 // Initialize Resend
-let resend: any = null;
+let resendInstance: any = null;
 if (RESEND_API_KEY) {
   try {
-    resend = new Resend(RESEND_API_KEY);
+    resendInstance = new Resend(RESEND_API_KEY);
     console.log('✅ Resend initialized');
-  } catch (error) {
-    console.error('❌ Resend init error:', error);
+  } catch (error: any) {
+    console.error('❌ Resend init error:', error.message);
   }
+} else {
+  console.error('❌ RESEND_API_KEY is MISSING! Please add it to .env.local');
 }
-
-// ============================================
-// GMAIL FALLBACK (For localhost only)
-// ============================================
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
-
-const gmailTransporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASS,
-  },
-});
 
 // ============================================
 // GENERATE OTP
@@ -44,12 +31,17 @@ export function generateOTP(): string {
 }
 
 // ============================================
-// SEND OTP VIA EMAIL
+// SEND OTP VIA EMAIL (RESEND ONLY)
 // ============================================
 export async function sendEmailOTP(email: string, otp: string): Promise<boolean> {
   try {
     console.log(`📧 Sending OTP to: ${email}`);
     console.log(`🔑 OTP: ${otp}`);
+
+    if (!resendInstance) {
+      console.error('❌ Resend not initialized. Check RESEND_API_KEY');
+      return false;
+    }
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
@@ -66,30 +58,19 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
       </div>
     `;
 
-    // Try Resend first (works on Vercel)
-    if (resend) {
-      try {
-        await resend.emails.send({
-          from: FROM_EMAIL,
-          to: [email],
-          subject: '🔐 Your Login OTP - VideoStream Pro',
-          html: html,
-        });
-        console.log(`✅ OTP sent via Resend to ${email}`);
-        return true;
-      } catch (resendError: any) {
-        console.error('❌ Resend failed:', resendError.message);
-      }
+    const emailResult = await resendInstance.emails.send({
+      from: FROM_EMAIL,
+      to: [email],
+      subject: '🔐 Your Login OTP - VideoStream Pro',
+      html: html,
+    });
+
+    if (emailResult.error) {
+      console.error('❌ Resend error:', emailResult.error);
+      return false;
     }
 
-    // Fallback to Gmail (localhost)
-    const info = await gmailTransporter.sendMail({
-      from: `"VideoStream Pro" <${EMAIL_USER}>`,
-      to: email,
-      subject: '🔐 Your Login OTP - VideoStream Pro',
-      html,
-    });
-    console.log(`✅ OTP sent via Gmail to ${email}`);
+    console.log(`✅ OTP sent via Resend to ${email} (ID: ${emailResult.data?.id})`);
     return true;
   } catch (error: any) {
     console.error('❌ OTP email failed:', error.message);
@@ -98,7 +79,7 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
 }
 
 // ============================================
-// SEND SMS OTP
+// SEND SMS OTP (Demo)
 // ============================================
 export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
   console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
@@ -106,11 +87,11 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
 }
 
 // ============================================
-// SEND INVOICE EMAIL
+// SEND INVOICE EMAIL (RESEND ONLY)
 // ============================================
 export async function sendInvoiceEmail(
   email: string,
-  data: {
+  invoiceData: {
     username: string;
     planName: string;
     planType: string;
@@ -124,7 +105,12 @@ export async function sendInvoiceEmail(
 ): Promise<boolean> {
   try {
     console.log(`📧 Sending invoice to: ${email}`);
-    console.log(`📄 Plan: ${data.planName}, Amount: ₹${data.amount}`);
+    console.log(`📄 Plan: ${invoiceData.planName}, Amount: ₹${invoiceData.amount}`);
+
+    if (!resendInstance) {
+      console.error('❌ Resend not initialized. Check RESEND_API_KEY');
+      return false;
+    }
 
     const html = `
       <!DOCTYPE html>
@@ -152,24 +138,24 @@ export async function sendInvoiceEmail(
             <p>Payment Confirmation & Invoice</p>
           </div>
           <div class="content">
-            <h2>Hello ${data.username},</h2>
-            <p>Thank you for upgrading to <strong>${data.planName}</strong>!</p>
+            <h2>Hello ${invoiceData.username},</h2>
+            <p>Thank you for upgrading to <strong>${invoiceData.planName}</strong>!</p>
             <div class="invoice-box">
               <h3>📄 Invoice Details</h3>
               <table>
                 <tr><td>Invoice Number</td><td>#INV-${Date.now().toString().slice(-8)}</td></tr>
                 <tr><td>Date</td><td>${new Date().toLocaleDateString()}</td></tr>
-                <tr><td>Plan</td><td>${data.planName}</td></tr>
-                <tr><td>Amount</td><td>₹${data.amount}</td></tr>
-                <tr><td>Payment ID</td><td>${data.paymentId}</td></tr>
-                <tr><td>Watch Time</td><td>${data.watchTime}</td></tr>
-                <tr><td>Start Date</td><td>${data.startDate}</td></tr>
-                <tr><td>Valid Until</td><td>${data.endDate}</td></tr>
+                <tr><td>Plan</td><td>${invoiceData.planName}</td></tr>
+                <tr><td>Amount</td><td>₹${invoiceData.amount}</td></tr>
+                <tr><td>Payment ID</td><td>${invoiceData.paymentId}</td></tr>
+                <tr><td>Watch Time</td><td>${invoiceData.watchTime}</td></tr>
+                <tr><td>Start Date</td><td>${invoiceData.startDate}</td></tr>
+                <tr><td>Valid Until</td><td>${invoiceData.endDate}</td></tr>
               </table>
             </div>
             <div style="margin: 20px 0;">
               <h3>✨ Plan Features</h3>
-              <ul>${data.features.map(f => `<li>${f}</li>`).join('')}</ul>
+              <ul>${invoiceData.features.map(f => `<li>${f}</li>`).join('')}</ul>
             </div>
             <div style="text-align: center; margin: 20px 0;">
               <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.vercel.app'}" style="background: #667eea; color: white; padding: 10px 25px; text-decoration: none; border-radius: 5px;">Go to VideoStream Pro</a>
@@ -184,30 +170,19 @@ export async function sendInvoiceEmail(
       </html>
     `;
 
-    // Try Resend first (works on Vercel)
-    if (resend) {
-      try {
-        await resend.emails.send({
-          from: FROM_EMAIL,
-          to: [email],
-          subject: `🎬 ${data.planName} - Payment Confirmation & Invoice`,
-          html: html,
-        });
-        console.log(`✅ Invoice sent via Resend to ${email}`);
-        return true;
-      } catch (resendError: any) {
-        console.error('❌ Resend failed:', resendError.message);
-      }
+    const emailResult = await resendInstance.emails.send({
+      from: FROM_EMAIL,
+      to: [email],
+      subject: `🎬 ${invoiceData.planName} - Payment Confirmation & Invoice`,
+      html: html,
+    });
+
+    if (emailResult.error) {
+      console.error('❌ Resend error:', emailResult.error);
+      return false;
     }
 
-    // Fallback to Gmail (localhost)
-    const info = await gmailTransporter.sendMail({
-      from: `"VideoStream Pro" <${EMAIL_USER}>`,
-      to: email,
-      subject: `🎬 ${data.planName} - Payment Confirmation & Invoice`,
-      html,
-    });
-    console.log(`✅ Invoice sent via Gmail to ${email}`);
+    console.log(`✅ Invoice sent via Resend to ${email} (ID: ${emailResult.data?.id})`);
     return true;
   } catch (error: any) {
     console.error('❌ Invoice email failed:', error.message);
