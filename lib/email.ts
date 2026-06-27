@@ -1,39 +1,39 @@
+import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 
 // ============================================
-// EMAIL CONFIGURATION - Works on Vercel
+// RESEND CONFIGURATION (Primary - Works on Vercel)
+// ============================================
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+
+console.log('📧 Email module loaded');
+console.log('📧 RESEND_API_KEY:', RESEND_API_KEY ? '✅ Set' : '❌ MISSING');
+console.log('📧 FROM_EMAIL:', FROM_EMAIL);
+
+// Initialize Resend
+let resend: any = null;
+if (RESEND_API_KEY) {
+  try {
+    resend = new Resend(RESEND_API_KEY);
+    console.log('✅ Resend initialized');
+  } catch (error) {
+    console.error('❌ Resend init error:', error);
+  }
+}
+
+// ============================================
+// GMAIL FALLBACK (for localhost)
 // ============================================
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
 
-console.log('📧 Email module loaded');
-console.log('📧 EMAIL_USER:', EMAIL_USER ? '✅ Set' : '❌ MISSING');
-console.log('📧 EMAIL_PASS:', EMAIL_PASS ? '✅ Set' : '❌ MISSING');
-
-// ============================================
-// TRANSPORTER WITH OPTIMIZED SETTINGS
-// ============================================
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
+const gmailTransporter = nodemailer.createTransport({
+  service: 'gmail',
   auth: {
     user: EMAIL_USER,
     pass: EMAIL_PASS,
   },
-});
-
-transporter.verify((error) => {
-  if (error) {
-    console.error('❌ Email error:', error.message);
-    console.error('📧 Please check:');
-    console.error('   1. EMAIL_USER is correct');
-    console.error('   2. EMAIL_PASS is the 16-char App Password');
-    console.error('   3. 2-Step Verification is enabled');
-    console.error('   4. IMAP is enabled in Gmail settings');
-  } else {
-    console.log('✅ Email transporter ready');
-  }
 });
 
 // ============================================
@@ -52,7 +52,7 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
     console.log(`🔑 OTP: ${otp}`);
 
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f4f4f4;">
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; padding: 30px;">
           <div style="background: white; border-radius: 10px; padding: 30px; text-align: center;">
             <h2 style="color: #667eea;">🔐 VideoStream Pro</h2>
@@ -66,14 +66,30 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
       </div>
     `;
 
-    const info = await transporter.sendMail({
+    // Try Resend first (works on Vercel)
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: FROM_EMAIL,
+          to: [email],
+          subject: '🔐 Your Login OTP - VideoStream Pro',
+          html: html,
+        });
+        console.log(`✅ OTP sent via Resend to ${email}`);
+        return true;
+      } catch (resendError: any) {
+        console.error('❌ Resend failed:', resendError.message);
+      }
+    }
+
+    // Fallback to Gmail
+    const info = await gmailTransporter.sendMail({
       from: `"VideoStream Pro" <${EMAIL_USER}>`,
       to: email,
       subject: '🔐 Your Login OTP - VideoStream Pro',
       html,
     });
-
-    console.log(`✅ OTP email sent to ${email} (ID: ${info.messageId})`);
+    console.log(`✅ OTP sent via Gmail to ${email}`);
     return true;
   } catch (error: any) {
     console.error('❌ OTP email failed:', error.message);
@@ -82,19 +98,11 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
 }
 
 // ============================================
-// SEND OTP VIA SMS (TWILIO)
+// SEND SMS OTP
 // ============================================
 export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
-  try {
-    console.log(`📱 Sending SMS OTP to: ${phone}`);
-    console.log(`🔑 OTP: ${otp}`);
-    // Demo mode (console)
-    console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
-    return true;
-  } catch (error: any) {
-    console.error('❌ SMS send failed:', error.message);
-    return true;
-  }
+  console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
+  return true;
 }
 
 // ============================================
@@ -172,7 +180,7 @@ export async function sendInvoiceEmail(
             <p style="color: #666;">Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
           </div>
           <div class="footer">
-            <p>This is a system-generated invoice. Please do not reply to this email.</p>
+            <p>This is a system-generated invoice. Please do not reply.</p>
             <p>&copy; ${new Date().getFullYear()} VideoStream Pro. All rights reserved.</p>
           </div>
         </div>
@@ -180,14 +188,30 @@ export async function sendInvoiceEmail(
       </html>
     `;
 
-    const info = await transporter.sendMail({
+    // Try Resend first (works on Vercel)
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: FROM_EMAIL,
+          to: [email],
+          subject: `🎬 ${data.planName} - Payment Confirmation & Invoice`,
+          html: html,
+        });
+        console.log(`✅ Invoice sent via Resend to ${email}`);
+        return true;
+      } catch (resendError: any) {
+        console.error('❌ Resend failed:', resendError.message);
+      }
+    }
+
+    // Fallback to Gmail
+    const info = await gmailTransporter.sendMail({
       from: `"VideoStream Pro" <${EMAIL_USER}>`,
       to: email,
       subject: `🎬 ${data.planName} - Payment Confirmation & Invoice`,
       html,
     });
-
-    console.log(`✅ Invoice email sent to ${email} (ID: ${info.messageId})`);
+    console.log(`✅ Invoice sent via Gmail to ${email}`);
     return true;
   } catch (error: any) {
     console.error('❌ Invoice email failed:', error.message);

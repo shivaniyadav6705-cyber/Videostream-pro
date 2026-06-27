@@ -21,6 +21,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hot-toast": "^2.6.0",
+    "resend": "^6.16.0",
     "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.3",
     "twilio": "^6.0.2"
