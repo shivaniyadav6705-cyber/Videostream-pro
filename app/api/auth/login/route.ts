@@ -14,6 +14,8 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const { emailOrPhone, password } = await req.json();
 
+    console.log('🔐 Login attempt:', { emailOrPhone });
+
     if (!emailOrPhone || !password) {
       return NextResponse.json({ error: 'Email/Phone and password required' }, { status: 400 });
     }
@@ -43,10 +45,13 @@ export async function POST(req: NextRequest) {
 
     global._otps[userId] = { otp, expiresAt };
 
-    console.log(`🔐 Login: ${emailOrPhone}`);
-    console.log(`📍 Location: ${location.city}, ${location.state}`);
-    console.log(`📧 Method: ${method}`);
-    console.log(`🔑 OTP: ${otp}`);
+    console.log('\n' + '='.repeat(50));
+    console.log(`🔐 LOGIN: ${emailOrPhone}`);
+    console.log(`📍 LOCATION: ${location.city}, ${location.state}`);
+    console.log(`📧 OTP METHOD: ${method.toUpperCase()}`);
+    console.log(`🔑 OTP CODE: ${otp}`);
+    console.log(`📧 Sending to: ${method === 'email' ? user.email : user.phone}`);
+    console.log('='.repeat(50) + '\n');
 
     // Send OTP
     if (method === 'email') {

@@ -35,7 +35,7 @@ const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
 console.log('📱 Twilio loaded');
-console.log('📱 TWILIO_ACCOUNT_SID:', TWILIO_ACCOUNT_SID ? `✅ ${TWILIO_ACCOUNT_SID.substring(0, 10)}...` : '❌ MISSING');
+console.log('📱 TWILIO_ACCOUNT_SID:', TWILIO_ACCOUNT_SID ? '✅ Set' : '❌ MISSING');
 console.log('📱 TWILIO_AUTH_TOKEN:', TWILIO_AUTH_TOKEN ? '✅ Set' : '❌ MISSING');
 console.log('📱 TWILIO_PHONE_NUMBER:', TWILIO_PHONE_NUMBER ? '✅ Set' : '❌ MISSING');
 
@@ -103,14 +103,12 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
     console.log(`📱 Sending SMS OTP to: ${phone}`);
     console.log(`🔑 OTP: ${otp}`);
 
-    // If Twilio not configured, use demo mode
     if (!twilioClient || !TWILIO_PHONE_NUMBER) {
       console.log('⚠️ Twilio not configured. Using demo mode.');
       console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
       return true;
     }
 
-    // Format phone number
     let formattedPhone = phone.trim().replace(/\s/g, '');
     if (!formattedPhone.startsWith('+')) {
       if (formattedPhone.startsWith('91')) {
@@ -138,7 +136,7 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
 }
 
 // ============================================
-// SEND INVOICE EMAIL (PLAN UPGRADE)
+// SEND INVOICE EMAIL
 // ============================================
 export async function sendInvoiceEmail(
   email: string,
