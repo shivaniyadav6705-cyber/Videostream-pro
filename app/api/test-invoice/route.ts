@@ -2,20 +2,10 @@ import { NextResponse } from 'next/server';
 import { sendInvoiceEmail } from '@/lib/email';
 
 export async function GET() {
-  const testEmail = process.env.EMAIL_USER;
+  const testEmail = process.env.FROM_EMAIL || 'shivaniyadav6705@gmail.com';
   
-  if (!testEmail) {
-    return NextResponse.json({ 
-      success: false, 
-      error: 'EMAIL_USER not set in .env.local' 
-    }, { status: 400 });
-  }
-
-  console.log('\n' + '='.repeat(50));
-  console.log('📧 TESTING INVOICE EMAIL');
-  console.log(`📧 Sending to: ${testEmail}`);
-  console.log('='.repeat(50) + '\n');
-
+  console.log(`📧 Sending test invoice to: ${testEmail}`);
+  
   const result = await sendInvoiceEmail(testEmail, {
     username: 'Test User',
     planName: 'Gold Plan (TEST)',

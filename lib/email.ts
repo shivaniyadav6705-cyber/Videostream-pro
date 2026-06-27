@@ -1,12 +1,12 @@
 import { Resend } from 'resend';
 
 // ============================================
-// RESEND CONFIGURATION (ONLY - WORKS ON VERCEL)
+// RESEND CONFIGURATION (ONLY - NO GMAIL)
 // ============================================
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
-console.log('📧 Email module loaded');
+console.log('📧 Email module loaded - RESEND ONLY');
 console.log('📧 RESEND_API_KEY:', RESEND_API_KEY ? '✅ Set' : '❌ MISSING');
 console.log('📧 FROM_EMAIL:', FROM_EMAIL);
 
@@ -20,7 +20,7 @@ if (RESEND_API_KEY) {
     console.error('❌ Resend init error:', error.message);
   }
 } else {
-  console.error('❌ RESEND_API_KEY is MISSING! Please add it to .env.local');
+  console.error('❌ RESEND_API_KEY is MISSING!');
 }
 
 // ============================================
@@ -31,7 +31,7 @@ export function generateOTP(): string {
 }
 
 // ============================================
-// SEND OTP VIA EMAIL (RESEND ONLY)
+// SEND OTP VIA EMAIL
 // ============================================
 export async function sendEmailOTP(email: string, otp: string): Promise<boolean> {
   try {
@@ -39,7 +39,7 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
     console.log(`🔑 OTP: ${otp}`);
 
     if (!resendInstance) {
-      console.error('❌ Resend not initialized. Check RESEND_API_KEY');
+      console.error('❌ Resend not initialized');
       return false;
     }
 
@@ -58,19 +58,19 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
       </div>
     `;
 
-    const emailResult = await resendInstance.emails.send({
+    const result = await resendInstance.emails.send({
       from: FROM_EMAIL,
       to: [email],
       subject: '🔐 Your Login OTP - VideoStream Pro',
       html: html,
     });
 
-    if (emailResult.error) {
-      console.error('❌ Resend error:', emailResult.error);
+    if (result.error) {
+      console.error('❌ Resend error:', result.error);
       return false;
     }
 
-    console.log(`✅ OTP sent via Resend to ${email} (ID: ${emailResult.data?.id})`);
+    console.log(`✅ OTP sent via Resend to ${email} (ID: ${result.data?.id})`);
     return true;
   } catch (error: any) {
     console.error('❌ OTP email failed:', error.message);
@@ -87,7 +87,7 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
 }
 
 // ============================================
-// SEND INVOICE EMAIL (RESEND ONLY)
+// SEND INVOICE EMAIL
 // ============================================
 export async function sendInvoiceEmail(
   email: string,
@@ -108,7 +108,7 @@ export async function sendInvoiceEmail(
     console.log(`📄 Plan: ${invoiceData.planName}, Amount: ₹${invoiceData.amount}`);
 
     if (!resendInstance) {
-      console.error('❌ Resend not initialized. Check RESEND_API_KEY');
+      console.error('❌ Resend not initialized');
       return false;
     }
 
@@ -170,19 +170,19 @@ export async function sendInvoiceEmail(
       </html>
     `;
 
-    const emailResult = await resendInstance.emails.send({
+    const result = await resendInstance.emails.send({
       from: FROM_EMAIL,
       to: [email],
       subject: `🎬 ${invoiceData.planName} - Payment Confirmation & Invoice`,
       html: html,
     });
 
-    if (emailResult.error) {
-      console.error('❌ Resend error:', emailResult.error);
+    if (result.error) {
+      console.error('❌ Resend error:', result.error);
       return false;
     }
 
-    console.log(`✅ Invoice sent via Resend to ${email} (ID: ${emailResult.data?.id})`);
+    console.log(`✅ Invoice sent via Resend to ${email} (ID: ${result.data?.id})`);
     return true;
   } catch (error: any) {
     console.error('❌ Invoice email failed:', error.message);
