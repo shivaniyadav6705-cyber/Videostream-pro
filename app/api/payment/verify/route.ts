@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     console.log(`📋 Plan Name: ${planName}`);
     console.log('='.repeat(50) + '\n');
 
+    // Get token
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
 
@@ -48,10 +49,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No token provided' }, { status: 401 });
     }
 
+    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     console.log(`👤 User ID: ${decoded.userId}`);
 
-    // Verify signature
+    // Verify Razorpay signature
     const text = razorpay_order_id + '|' + razorpay_payment_id;
     const signature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
@@ -65,7 +67,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    // Find and update user
+    // Find user
     const user = await User.findById(decoded.userId);
     if (!user) {
       console.log('❌ User not found');
@@ -75,11 +77,11 @@ export async function POST(req: NextRequest) {
     console.log(`👤 User: ${user.username} (${user.email})`);
     console.log(`📋 Previous Plan: ${user.plan}`);
 
+    // Update user
     const now = new Date();
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 30);
 
-    // Update user
     user.plan = planType;
     user.planStartDate = now;
     user.planEndDate = endDate;
@@ -92,27 +94,16 @@ export async function POST(req: NextRequest) {
     console.log(`✅ User upgraded to: ${planName}`);
 
     // ============================================
-    // SEND INVOICE EMAIL - WITH LOGGING
+    // SEND INVOICE EMAIL - THIS IS THE FIX
     // ============================================
     const planInfo = PLAN_DETAILS[planType];
     let emailSent = false;
-    let emailError = null;
 
     if (planInfo) {
+      console.log(`📧 Attempting to send invoice to: ${user.email}`);
+      
       try {
-        console.log(`📧 Attempting to send invoice email to: ${user.email}`);
-        console.log(`📄 Invoice Data:`, {
-          username: user.username,
-          planName: planInfo.name,
-          planType: planType,
-          paymentId: razorpay_payment_id,
-          amount: planInfo.price,
-          watchTime: planInfo.watchTime,
-          features: planInfo.features,
-          startDate: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-          endDate: endDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        });
-
+        // IMPORTANT: Use the exact same function that worked in test
         emailSent = await sendInvoiceEmail(user.email, {
           username: user.username,
           planName: planInfo.name,
@@ -126,13 +117,12 @@ export async function POST(req: NextRequest) {
         });
 
         if (emailSent) {
-          console.log(`✅ Invoice email sent successfully to ${user.email}`);
+          console.log(`✅ Invoice email sent to ${user.email}`);
         } else {
-          console.log(`❌ Invoice email returned false for ${user.email}`);
+          console.log(`❌ Invoice email returned false`);
         }
-      } catch (error: any) {
-        console.error('❌ Error sending invoice email:', error.message);
-        emailError = error.message;
+      } catch (emailError: any) {
+        console.error('❌ Email error:', emailError.message);
         emailSent = false;
       }
     } else {
@@ -140,10 +130,8 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('='.repeat(50));
-    console.log('💰 PAYMENT VERIFICATION COMPLETED');
-    console.log(`✅ Success: true`);
+    console.log(`✅ Payment Verification Complete`);
     console.log(`📧 Invoice Email Sent: ${emailSent}`);
-    if (emailError) console.log(`❌ Email Error: ${emailError}`);
     console.log('='.repeat(50) + '\n');
 
     return NextResponse.json({
