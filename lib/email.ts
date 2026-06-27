@@ -138,6 +138,9 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
 // ============================================
 // SEND INVOICE EMAIL
 // ============================================
+// ============================================
+// SEND INVOICE EMAIL (PLAN UPGRADE)
+// ============================================
 export async function sendInvoiceEmail(
   email: string,
   data: {
@@ -164,14 +167,17 @@ export async function sendInvoiceEmail(
         <title>Payment Confirmation - VideoStream Pro</title>
         <style>
           body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
           .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; }
-          .header h1 { color: white; margin: 0; }
+          .header h1 { color: white; margin: 0; font-size: 28px; }
+          .header p { color: rgba(255,255,255,0.8); margin: 5px 0 0; }
           .content { padding: 30px; }
-          .invoice-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .invoice-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e9ecef; }
           .invoice-box table { width: 100%; border-collapse: collapse; }
-          .invoice-box td { padding: 8px 0; border-bottom: 1px solid #e9ecef; }
+          .invoice-box tr { border-bottom: 1px solid #e9ecef; }
+          .invoice-box td { padding: 10px 0; }
           .invoice-box td:last-child { text-align: right; font-weight: bold; }
+          .btn { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; }
           .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; border-top: 1px solid #eee; }
         </style>
       </head>
@@ -183,14 +189,14 @@ export async function sendInvoiceEmail(
           </div>
           <div class="content">
             <h2>Hello ${data.username},</h2>
-            <p>Thank you for upgrading to <strong>${data.planName}</strong>!</p>
+            <p>Thank you for upgrading to the <strong>${data.planName}</strong>! Your payment has been successfully processed.</p>
             <div class="invoice-box">
-              <h3>📄 Invoice Details</h3>
+              <h3 style="margin-top: 0;">📄 Invoice Details</h3>
               <table>
                 <tr><td>Invoice Number</td><td>#INV-${Date.now().toString().slice(-8)}</td></tr>
                 <tr><td>Date</td><td>${new Date().toLocaleDateString()}</td></tr>
                 <tr><td>Plan</td><td>${data.planName}</td></tr>
-                <tr><td>Amount</td><td>₹${data.amount}</td></tr>
+                <tr><td>Amount Paid</td><td>₹${data.amount}</td></tr>
                 <tr><td>Payment ID</td><td>${data.paymentId}</td></tr>
                 <tr><td>Watch Time</td><td>${data.watchTime}</td></tr>
                 <tr><td>Start Date</td><td>${data.startDate}</td></tr>
@@ -202,12 +208,13 @@ export async function sendInvoiceEmail(
               <ul>${data.features.map(f => `<li>${f}</li>`).join('')}</ul>
             </div>
             <div style="text-align: center; margin: 20px 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="background: #667eea; color: white; padding: 10px 25px; text-decoration: none; border-radius: 5px;">Go to VideoStream Pro</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" class="btn">Go to VideoStream Pro</a>
             </div>
-            <p>Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
+            <p style="color: #666;">Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
           </div>
           <div class="footer">
-            <p>System-generated invoice. Do not reply.</p>
+            <p>This is a system-generated invoice. Please do not reply to this email.</p>
+            <p>&copy; ${new Date().getFullYear()} VideoStream Pro. All rights reserved.</p>
           </div>
         </div>
       </body>

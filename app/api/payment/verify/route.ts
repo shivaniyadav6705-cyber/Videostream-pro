@@ -32,14 +32,24 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planType, planName } = body;
 
+    console.log('\n' + '='.repeat(50));
+    console.log('💰 PAYMENT VERIFICATION STARTED');
+    console.log(`📦 Order ID: ${razorpay_order_id}`);
+    console.log(`💳 Payment ID: ${razorpay_payment_id}`);
+    console.log(`📋 Plan Type: ${planType}`);
+    console.log(`📋 Plan Name: ${planName}`);
+    console.log('='.repeat(50) + '\n');
+
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
 
     if (!token) {
+      console.log('❌ No token provided');
       return NextResponse.json({ error: 'No token provided' }, { status: 401 });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    console.log(`👤 User ID: ${decoded.userId}`);
 
     // Verify signature
     const text = razorpay_order_id + '|' + razorpay_payment_id;
@@ -48,20 +58,28 @@ export async function POST(req: NextRequest) {
       .update(text)
       .digest('hex');
 
+    console.log(`🔐 Signature match: ${signature === razorpay_signature}`);
+
     if (signature !== razorpay_signature) {
+      console.log('❌ Invalid signature');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
     // Find and update user
     const user = await User.findById(decoded.userId);
     if (!user) {
+      console.log('❌ User not found');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    console.log(`👤 User: ${user.username} (${user.email})`);
+    console.log(`📋 Previous Plan: ${user.plan}`);
 
     const now = new Date();
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 30);
 
+    // Update user
     user.plan = planType;
     user.planStartDate = now;
     user.planEndDate = endDate;
@@ -71,17 +89,30 @@ export async function POST(req: NextRequest) {
     user.downloadsToday = 0;
     await user.save();
 
-    console.log(`✅ User upgraded: ${user.username} → ${planName}`);
-    console.log(`📧 Sending invoice to: ${user.email}`);
+    console.log(`✅ User upgraded to: ${planName}`);
 
     // ============================================
-    // SEND INVOICE EMAIL
+    // SEND INVOICE EMAIL - WITH LOGGING
     // ============================================
     const planInfo = PLAN_DETAILS[planType];
     let emailSent = false;
+    let emailError = null;
 
     if (planInfo) {
       try {
+        console.log(`📧 Attempting to send invoice email to: ${user.email}`);
+        console.log(`📄 Invoice Data:`, {
+          username: user.username,
+          planName: planInfo.name,
+          planType: planType,
+          paymentId: razorpay_payment_id,
+          amount: planInfo.price,
+          watchTime: planInfo.watchTime,
+          features: planInfo.features,
+          startDate: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+          endDate: endDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        });
+
         emailSent = await sendInvoiceEmail(user.email, {
           username: user.username,
           planName: planInfo.name,
@@ -95,15 +126,25 @@ export async function POST(req: NextRequest) {
         });
 
         if (emailSent) {
-          console.log(`✅ Invoice email sent to ${user.email}`);
+          console.log(`✅ Invoice email sent successfully to ${user.email}`);
         } else {
-          console.error(`❌ Failed to send invoice email to ${user.email}`);
+          console.log(`❌ Invoice email returned false for ${user.email}`);
         }
-      } catch (emailError: any) {
-        console.error('❌ Email error:', emailError.message);
+      } catch (error: any) {
+        console.error('❌ Error sending invoice email:', error.message);
+        emailError = error.message;
         emailSent = false;
       }
+    } else {
+      console.log(`❌ Plan info not found for: ${planType}`);
     }
+
+    console.log('='.repeat(50));
+    console.log('💰 PAYMENT VERIFICATION COMPLETED');
+    console.log(`✅ Success: true`);
+    console.log(`📧 Invoice Email Sent: ${emailSent}`);
+    if (emailError) console.log(`❌ Email Error: ${emailError}`);
+    console.log('='.repeat(50) + '\n');
 
     return NextResponse.json({
       success: true,
@@ -114,7 +155,7 @@ export async function POST(req: NextRequest) {
       invoiceSent: emailSent,
     });
   } catch (error: any) {
-    console.error('Payment verification error:', error);
+    console.error('❌ Payment verification error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
