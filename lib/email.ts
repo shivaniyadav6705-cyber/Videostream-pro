@@ -6,16 +6,18 @@ import { Resend } from 'resend';
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
+console.log('📧 ========================================');
 console.log('📧 Email module loaded - RESEND ONLY');
 console.log('📧 RESEND_API_KEY:', RESEND_API_KEY ? '✅ Set' : '❌ MISSING');
 console.log('📧 FROM_EMAIL:', FROM_EMAIL);
+console.log('📧 ========================================');
 
 // Initialize Resend
 let resendInstance: any = null;
 if (RESEND_API_KEY) {
   try {
     resendInstance = new Resend(RESEND_API_KEY);
-    console.log('✅ Resend initialized');
+    console.log('✅ Resend initialized successfully');
   } catch (error: any) {
     console.error('❌ Resend init error:', error.message);
   }
@@ -31,7 +33,7 @@ export function generateOTP(): string {
 }
 
 // ============================================
-// SEND OTP VIA EMAIL
+// SEND OTP VIA EMAIL (RESEND ONLY)
 // ============================================
 export async function sendEmailOTP(email: string, otp: string): Promise<boolean> {
   try {
@@ -39,7 +41,7 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
     console.log(`🔑 OTP: ${otp}`);
 
     if (!resendInstance) {
-      console.error('❌ Resend not initialized');
+      console.error('❌ Resend not initialized. Check RESEND_API_KEY');
       return false;
     }
 
@@ -79,7 +81,7 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
 }
 
 // ============================================
-// SEND SMS OTP (Demo)
+// SEND SMS OTP (Demo mode)
 // ============================================
 export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
   console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
@@ -87,7 +89,7 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
 }
 
 // ============================================
-// SEND INVOICE EMAIL
+// SEND INVOICE EMAIL (RESEND ONLY)
 // ============================================
 export async function sendInvoiceEmail(
   email: string,
@@ -108,7 +110,7 @@ export async function sendInvoiceEmail(
     console.log(`📄 Plan: ${invoiceData.planName}, Amount: ₹${invoiceData.amount}`);
 
     if (!resendInstance) {
-      console.error('❌ Resend not initialized');
+      console.error('❌ Resend not initialized. Check RESEND_API_KEY');
       return false;
     }
 
