@@ -1,8 +1,7 @@
 import nodemailer from 'nodemailer';
-import twilio from 'twilio';
 
 // ============================================
-// EMAIL CONFIGURATION
+// EMAIL CONFIGURATION - Works on Vercel
 // ============================================
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
@@ -11,8 +10,13 @@ console.log('📧 Email module loaded');
 console.log('📧 EMAIL_USER:', EMAIL_USER ? '✅ Set' : '❌ MISSING');
 console.log('📧 EMAIL_PASS:', EMAIL_PASS ? '✅ Set' : '❌ MISSING');
 
+// ============================================
+// TRANSPORTER WITH OPTIMIZED SETTINGS
+// ============================================
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
   auth: {
     user: EMAIL_USER,
     pass: EMAIL_PASS,
@@ -22,33 +26,15 @@ const transporter = nodemailer.createTransport({
 transporter.verify((error) => {
   if (error) {
     console.error('❌ Email error:', error.message);
+    console.error('📧 Please check:');
+    console.error('   1. EMAIL_USER is correct');
+    console.error('   2. EMAIL_PASS is the 16-char App Password');
+    console.error('   3. 2-Step Verification is enabled');
+    console.error('   4. IMAP is enabled in Gmail settings');
   } else {
     console.log('✅ Email transporter ready');
   }
 });
-
-// ============================================
-// TWILIO SMS CONFIGURATION
-// ============================================
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
-
-console.log('📱 Twilio loaded');
-console.log('📱 TWILIO_ACCOUNT_SID:', TWILIO_ACCOUNT_SID ? '✅ Set' : '❌ MISSING');
-console.log('📱 TWILIO_AUTH_TOKEN:', TWILIO_AUTH_TOKEN ? '✅ Set' : '❌ MISSING');
-console.log('📱 TWILIO_PHONE_NUMBER:', TWILIO_PHONE_NUMBER ? '✅ Set' : '❌ MISSING');
-
-// Initialize Twilio client
-let twilioClient: any = null;
-if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
-  try {
-    twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-    console.log('✅ Twilio client initialized');
-  } catch (error: any) {
-    console.error('❌ Twilio init error:', error.message);
-  }
-}
 
 // ============================================
 // GENERATE OTP
@@ -62,7 +48,7 @@ export function generateOTP(): string {
 // ============================================
 export async function sendEmailOTP(email: string, otp: string): Promise<boolean> {
   try {
-    console.log(`📧 Sending OTP to email: ${email}`);
+    console.log(`📧 Sending OTP to: ${email}`);
     console.log(`🔑 OTP: ${otp}`);
 
     const html = `
@@ -102,44 +88,17 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
   try {
     console.log(`📱 Sending SMS OTP to: ${phone}`);
     console.log(`🔑 OTP: ${otp}`);
-
-    if (!twilioClient || !TWILIO_PHONE_NUMBER) {
-      console.log('⚠️ Twilio not configured. Using demo mode.');
-      console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
-      return true;
-    }
-
-    let formattedPhone = phone.trim().replace(/\s/g, '');
-    if (!formattedPhone.startsWith('+')) {
-      if (formattedPhone.startsWith('91')) {
-        formattedPhone = `+${formattedPhone}`;
-      } else {
-        formattedPhone = `+91${formattedPhone}`;
-      }
-    }
-
-    console.log(`📱 Formatted phone: ${formattedPhone}`);
-
-    const message = await twilioClient.messages.create({
-      body: `🔐 Your VideoStream Pro OTP is: ${otp}. Valid for 10 minutes.`,
-      to: formattedPhone,
-      from: TWILIO_PHONE_NUMBER,
-    });
-
-    console.log(`✅ SMS sent! SID: ${message.sid}`);
+    // Demo mode (console)
+    console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
     return true;
   } catch (error: any) {
     console.error('❌ SMS send failed:', error.message);
-    console.log(`📱 SMS OTP (FALLBACK): ${otp} to ${phone}`);
     return true;
   }
 }
 
 // ============================================
 // SEND INVOICE EMAIL
-// ============================================
-// ============================================
-// SEND INVOICE EMAIL (PLAN UPGRADE)
 // ============================================
 export async function sendInvoiceEmail(
   email: string,
@@ -208,7 +167,7 @@ export async function sendInvoiceEmail(
               <ul>${data.features.map(f => `<li>${f}</li>`).join('')}</ul>
             </div>
             <div style="text-align: center; margin: 20px 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" class="btn">Go to VideoStream Pro</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.vercel.app'}" class="btn">Go to VideoStream Pro</a>
             </div>
             <p style="color: #666;">Happy watching!<br><strong>The VideoStream Pro Team</strong></p>
           </div>
