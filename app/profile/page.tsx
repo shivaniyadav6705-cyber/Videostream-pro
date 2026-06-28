@@ -44,6 +44,7 @@ export default function ProfilePage() {
     totalDownloads: 0,
     plan: 'free',
   });
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export default function ProfilePage() {
 
   const fetchDownloads = async (token: string) => {
     try {
+      setRefreshing(true);
       console.log('📥 Fetching downloads...');
       
       const res = await fetch('/api/download', {
@@ -98,13 +100,6 @@ export default function ProfilePage() {
           'Content-Type': 'application/json',
         }
       });
-      
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await res.text();
-        console.error('❌ Non-JSON response:', text.substring(0, 200));
-        return;
-      }
       
       const data = await res.json();
       console.log('📥 Downloads response:', data);
@@ -119,9 +114,21 @@ export default function ProfilePage() {
         console.log(`✅ Loaded ${data.downloads?.length || 0} downloads`);
       } else {
         console.error('❌ Failed to fetch downloads:', data.error);
+        toast.error(data.error || 'Failed to load downloads');
       }
     } catch (error) {
       console.error('❌ Failed to fetch downloads:', error);
+      toast.error('Failed to load downloads');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchDownloads(token);
+      toast.success('Refreshed downloads');
     }
   };
 
@@ -198,7 +205,16 @@ export default function ProfilePage() {
 
           {/* Plan Details */}
           <div className="bg-slate-700/50 rounded-xl p-6 mb-6 border border-slate-600">
-            <h2 className="text-lg font-semibold text-white mb-4">📋 Plan Details</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-white">📋 Plan Details</h2>
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white transition disabled:opacity-50"
+              >
+                {refreshing ? '🔄 Refreshing...' : '🔄 Refresh'}
+              </button>
+            </div>
             <div className="grid md:grid-cols-3 gap-4">
               <div className="bg-slate-800/50 rounded-lg p-4 text-center">
                 <p className="text-xs text-gray-400">Current Plan</p>
@@ -237,7 +253,7 @@ export default function ProfilePage() {
           {/* Downloads Section */}
           <div className="mt-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white">📥 Downloads</h2>
+              <h2 className="text-lg font-semibold text-white">📥 My Downloads</h2>
               <span className="text-xs text-gray-400">{downloads.length} items</span>
             </div>
             
@@ -254,17 +270,17 @@ export default function ProfilePage() {
               <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
                 {downloads.map((download: Download) => (
                   <div key={download.id} className="bg-slate-700/30 rounded-lg p-3 flex justify-between items-center hover:bg-slate-700/50 transition">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{download.videoThumbnail || '🎬'}</span>
-                      <div>
-                        <p className="text-white text-sm font-medium">{download.videoTitle}</p>
-                        <div className="flex gap-3 text-xs text-gray-400">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-2xl flex-shrink-0">{download.videoThumbnail || '🎬'}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white text-sm font-medium truncate">{download.videoTitle}</p>
+                        <div className="flex gap-3 text-xs text-gray-400 flex-wrap">
                           <span>⏱️ {download.videoDuration}</span>
                           <span>📅 {formatDate(download.downloadedAt)}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-shrink-0 ml-2">
                       <button 
                         onClick={() => {
                           toast.success(`▶️ Playing: ${download.videoTitle}`);
