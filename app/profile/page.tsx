@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 
 interface User {
@@ -69,7 +70,6 @@ export default function ProfilePage() {
         setUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
         
-        // Calculate plan dates
         if (data.user.planStartDate && data.user.planEndDate) {
           const start = new Date(data.user.planStartDate);
           const end = new Date(data.user.planEndDate);
@@ -99,7 +99,6 @@ export default function ProfilePage() {
         }
       });
       
-      // Check if response is JSON
       const contentType = res.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await res.text();
@@ -268,7 +267,7 @@ export default function ProfilePage() {
                     <div className="flex gap-2">
                       <button 
                         onClick={() => {
-                          toast.success(`Playing: ${download.videoTitle}`);
+                          toast.success(`▶️ Playing: ${download.videoTitle}`);
                         }}
                         className="text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white transition"
                       >
