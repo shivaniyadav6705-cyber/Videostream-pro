@@ -9,9 +9,7 @@ const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
 console.log('📧 Email module loaded');
 console.log('📧 RESEND_API_KEY:', RESEND_API_KEY ? '✅ Set' : '❌ MISSING');
-console.log('📧 FROM_EMAIL:', FROM_EMAIL);
 
-// Initialize Resend
 let resendInstance: any = null;
 if (RESEND_API_KEY) {
   try {
@@ -34,7 +32,6 @@ console.log('📱 TWILIO_ACCOUNT_SID:', TWILIO_ACCOUNT_SID ? '✅ Set' : '❌ MI
 console.log('📱 TWILIO_AUTH_TOKEN:', TWILIO_AUTH_TOKEN ? '✅ Set' : '❌ MISSING');
 console.log('📱 TWILIO_PHONE_NUMBER:', TWILIO_PHONE_NUMBER ? '✅ Set' : '❌ MISSING');
 
-// Initialize Twilio
 let twilioClient: any = null;
 if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
   try {
@@ -45,19 +42,13 @@ if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
   }
 }
 
-// ============================================
-// GENERATE OTP
-// ============================================
 export function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ============================================
-// SEND OTP VIA EMAIL (Using Resend)
-// ============================================
 export async function sendEmailOTP(email: string, otp: string): Promise<boolean> {
   try {
-    console.log(`📧 Sending OTP via Email to: ${email}`);
+    console.log(`📧 Sending Email OTP to: ${email}`);
     console.log(`🔑 OTP: ${otp}`);
 
     if (!resendInstance) {
@@ -70,12 +61,11 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; padding: 30px;">
           <div style="background: white; border-radius: 10px; padding: 30px; text-align: center;">
             <h2 style="color: #667eea;">🔐 VideoStream Pro</h2>
-            <p style="color: #333; font-size: 16px;">Your OTP for login is:</p>
+            <p style="color: #333;">Your OTP is:</p>
             <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <span style="font-size: 42px; font-weight: bold; letter-spacing: 5px; color: #667eea;">${otp}</span>
             </div>
-            <p style="color: #666; font-size: 14px;">This OTP is valid for <strong>10 minutes</strong>.</p>
-            <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+            <p style="color: #666;">Valid for 10 minutes.</p>
           </div>
         </div>
       </div>
@@ -93,7 +83,7 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
       return false;
     }
 
-    console.log(`✅ Email OTP sent via Resend to ${email} (ID: ${result.data?.id})`);
+    console.log(`✅ Email OTP sent to ${email}`);
     return true;
   } catch (error: any) {
     console.error('❌ Email OTP failed:', error.message);
@@ -101,22 +91,17 @@ export async function sendEmailOTP(email: string, otp: string): Promise<boolean>
   }
 }
 
-// ============================================
-// SEND OTP VIA SMS (Using Twilio)
-// ============================================
 export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
   try {
     console.log(`📱 Sending SMS OTP to: ${phone}`);
     console.log(`🔑 OTP: ${otp}`);
 
-    // If Twilio not configured, use demo mode
     if (!twilioClient || !TWILIO_PHONE_NUMBER) {
       console.log('⚠️ Twilio not configured. Using demo mode.');
       console.log(`📱 SMS OTP (DEMO): ${otp} to ${phone}`);
       return true;
     }
 
-    // Format phone number
     let formattedPhone = phone.trim().replace(/\s/g, '');
     if (!formattedPhone.startsWith('+')) {
       if (formattedPhone.startsWith('91')) {
@@ -129,7 +114,7 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
     console.log(`📱 Formatted phone: ${formattedPhone}`);
 
     const message = await twilioClient.messages.create({
-      body: `🔐 Your VideoStream Pro OTP is: ${otp}. Valid for 10 minutes. Do not share with anyone.`,
+      body: `🔐 Your VideoStream Pro OTP is: ${otp}. Valid for 10 minutes.`,
       to: formattedPhone,
       from: TWILIO_PHONE_NUMBER,
     });
@@ -143,9 +128,6 @@ export async function sendSMSOTP(phone: string, otp: string): Promise<boolean> {
   }
 }
 
-// ============================================
-// SEND INVOICE EMAIL (Using Resend)
-// ============================================
 export async function sendInvoiceEmail(
   email: string,
   data: {
@@ -243,7 +225,7 @@ export async function sendInvoiceEmail(
       return false;
     }
 
-    console.log(`✅ Invoice sent via Resend to ${email} (ID: ${result.data?.id})`);
+    console.log(`✅ Invoice sent to ${email}`);
     return true;
   } catch (error: any) {
     console.error('❌ Invoice email failed:', error.message);

@@ -4,11 +4,10 @@ import User from '@/models/User';
 import { sendEmailOTP, sendSMSOTP, generateOTP } from '@/lib/email';
 import { getLocationFromIP, getOTPMethod } from '@/lib/location';
 
-// Store OTPs globally
 declare global {
-  var _otps: Record<string, { otp: string; expiresAt: number }>;
+  var _otps: Map<string, { otp: string; expiresAt: number }>;
 }
-global._otps = global._otps || {};
+global._otps = global._otps || new Map();
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +20,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email/Phone and password required' }, { status: 400 });
     }
 
-    // Find user
     const user = await User.findOne({
       $or: [{ email: emailOrPhone }, { phone: emailOrPhone }],
     });
@@ -31,14 +29,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found. Please register first.' }, { status: 401 });
     }
 
-    // Verify password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       console.log(`❌ Invalid password for: ${emailOrPhone}`);
       return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
     }
 
-    // Get location and determine OTP method
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
     const location = await getLocationFromIP(ip);
     const method = getOTPMethod(location);
@@ -46,29 +42,25 @@ export async function POST(req: NextRequest) {
     console.log(`📍 Location: ${location.city}, ${location.state}`);
     console.log(`📧 OTP Method: ${method}`);
 
-    // Generate OTP
     const otp = generateOTP();
     const userId = user._id.toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const expiresAt = Date.now() + 10 * 60 * 1000;
 
-    // Store OTP - IMPORTANT: Use the userId as key
-    global._otps[userId] = { otp, expiresAt };
+    // Clear existing OTP and store new one
+    if (global._otps.has(userId)) {
+      global._otps.delete(userId);
+    }
+    global._otps.set(userId, { otp, expiresAt });
 
     console.log(`📝 OTP stored for user: ${userId}`);
     console.log(`🔑 OTP: ${otp}`);
     console.log(`⏰ Expires at: ${new Date(expiresAt).toLocaleString()}`);
-    console.log(`📋 All stored OTPs:`, Object.keys(global._otps));
+    console.log(`📋 Total OTPs stored: ${global._otps.size}`);
 
-    // Send OTP based on location
-    let otpSent = false;
     if (method === 'email') {
-      otpSent = await sendEmailOTP(user.email, otp);
+      await sendEmailOTP(user.email, otp);
     } else {
-      otpSent = await sendSMSOTP(user.phone || '9876543210', otp);
-    }
-
-    if (!otpSent) {
-      console.log(`⚠️ OTP send failed, but continuing for testing`);
+      await sendSMSOTP(user.phone || '9876543210', otp);
     }
 
     return NextResponse.json({
@@ -76,7 +68,7 @@ export async function POST(req: NextRequest) {
       message: `OTP sent to your ${method}`,
       userId: userId,
       method,
-      otp: otp, // FOR TESTING ONLY - REMOVE IN PRODUCTION
+      otp: otp, // FOR TESTING ONLY
     });
   } catch (error: any) {
     console.error('Login error:', error);

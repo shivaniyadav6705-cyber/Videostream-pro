@@ -4,10 +4,11 @@ import User from '@/models/User';
 import { sendEmailOTP, sendSMSOTP, generateOTP } from '@/lib/email';
 import { getLocationFromIP, getOTPMethod } from '@/lib/location';
 
+// Use Map for consistency with login and verify-otp
 declare global {
-  var _otps: Record<string, { otp: string; expiresAt: number }>;
+  var _otps: Map<string, { otp: string; expiresAt: number }>;
 }
-global._otps = global._otps || {};
+global._otps = global._otps || new Map();
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,11 +35,15 @@ export async function POST(req: NextRequest) {
     const otp = generateOTP();
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
-    // Store OTP
-    global._otps[userId] = { otp, expiresAt };
+    // Store OTP - clear existing first
+    if (global._otps.has(userId)) {
+      global._otps.delete(userId);
+    }
+    global._otps.set(userId, { otp, expiresAt });
 
     console.log(`🔄 New OTP: ${otp}`);
     console.log(`📧 Method: ${method}`);
+    console.log(`📝 OTP stored for user: ${userId}`);
 
     // Send OTP
     if (method === 'email') {
