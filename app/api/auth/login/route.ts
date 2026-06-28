@@ -4,7 +4,7 @@ import User from '@/models/User';
 import { sendEmailOTP, sendSMSOTP, generateOTP } from '@/lib/email';
 import { getLocationFromIP, getOTPMethod } from '@/lib/location';
 
-// Store OTPs globally (use Redis in production)
+// Store OTPs globally
 declare global {
   var _otps: Record<string, { otp: string; expiresAt: number }>;
 }
@@ -51,11 +51,13 @@ export async function POST(req: NextRequest) {
     const userId = user._id.toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    // Store OTP
+    // Store OTP - IMPORTANT: Use the userId as key
     global._otps[userId] = { otp, expiresAt };
 
+    console.log(`📝 OTP stored for user: ${userId}`);
     console.log(`🔑 OTP: ${otp}`);
     console.log(`⏰ Expires at: ${new Date(expiresAt).toLocaleString()}`);
+    console.log(`📋 All stored OTPs:`, Object.keys(global._otps));
 
     // Send OTP based on location
     let otpSent = false;
@@ -63,6 +65,10 @@ export async function POST(req: NextRequest) {
       otpSent = await sendEmailOTP(user.email, otp);
     } else {
       otpSent = await sendSMSOTP(user.phone || '9876543210', otp);
+    }
+
+    if (!otpSent) {
+      console.log(`⚠️ OTP send failed, but continuing for testing`);
     }
 
     return NextResponse.json({

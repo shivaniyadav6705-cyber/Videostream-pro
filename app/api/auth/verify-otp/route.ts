@@ -13,8 +13,11 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const { userId, otp } = await req.json();
 
+    console.log('🔐 ========================================');
     console.log(`🔐 OTP verification for user: ${userId}`);
     console.log(`🔑 OTP entered: ${otp}`);
+    console.log(`📋 All stored OTPs:`, Object.keys(global._otps));
+    console.log('🔐 ========================================');
 
     if (!userId || !otp) {
       return NextResponse.json({ error: 'UserId and OTP required' }, { status: 400 });
@@ -23,16 +26,23 @@ export async function POST(req: NextRequest) {
     // Get stored OTP
     const storedData = global._otps[userId];
 
+    console.log(`📝 Stored data:`, storedData);
+
     if (!storedData) {
       console.log(`❌ No OTP found for user: ${userId}`);
-      return NextResponse.json({ error: 'No OTP found. Please login again.' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'No OTP found. Please login again.' 
+      }, { status: 401 });
     }
 
     // Check expiry
     if (Date.now() > storedData.expiresAt) {
       console.log(`❌ OTP expired for user: ${userId}`);
+      console.log(`⏰ Expired at: ${new Date(storedData.expiresAt).toLocaleString()}`);
       delete global._otps[userId];
-      return NextResponse.json({ error: 'OTP expired. Please login again.' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'OTP expired. Please login again.' 
+      }, { status: 401 });
     }
 
     // Check OTP match
@@ -40,17 +50,21 @@ export async function POST(req: NextRequest) {
       console.log(`❌ Invalid OTP for user: ${userId}`);
       console.log(`🔑 Expected: ${storedData.otp}`);
       console.log(`🔑 Received: ${otp}`);
-      return NextResponse.json({ error: 'Invalid OTP. Please try again.' }, { status: 401 });
+      return NextResponse.json({ 
+        error: `Invalid OTP. Please try again.` 
+      }, { status: 401 });
     }
 
     // OTP verified - generate token
     const user = await User.findById(userId);
     if (!user) {
+      console.log(`❌ User not found: ${userId}`);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Clear OTP
     delete global._otps[userId];
+    console.log(`✅ OTP cleared for user: ${userId}`);
 
     const token = jwt.sign(
       { userId: user._id },
