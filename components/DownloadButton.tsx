@@ -19,8 +19,8 @@ export default function DownloadButton({
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [userPlan, setUserPlan] = useState<string>('free');
-  const [downloadsLeft, setDownloadsLeft] = useState<number | string>(1);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [downloadsLeft, setDownloadsLeft] = useState<number | string>('?');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -45,6 +45,8 @@ export default function DownloadButton({
     const token = localStorage.getItem('token');
 
     try {
+      console.log('📥 Sending download request for:', videoTitle);
+
       const response = await fetch('/api/download', {
         method: 'POST',
         headers: {
@@ -59,9 +61,22 @@ export default function DownloadButton({
         }),
       });
 
-      const data = await response.json();
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Non-JSON response:', text.substring(0, 200));
+        throw new Error('Server returned HTML instead of JSON. Please try again.');
+      }
 
-      if (response.ok && data.success) {
+      const data = await response.json();
+      console.log('📥 Download response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Download failed');
+      }
+
+      if (data.success) {
         setDownloadStatus('success');
         setMessage(`✅ ${videoTitle} downloaded!`);
         toast.success(`${videoTitle} downloaded successfully!`);
@@ -83,13 +98,23 @@ export default function DownloadButton({
           localStorage.setItem('user', JSON.stringify(user));
         }
 
-        // Simulate file download
-        const blob = new Blob([`Video: ${videoTitle}\nDuration: ${videoDuration}\nDownloaded from VideoStream Pro\nDate: ${new Date().toLocaleString()}`], 
-          { type: 'video/mp4' });
+        // Update downloads left
+        if (data.downloadsLeft !== undefined) {
+          setDownloadsLeft(data.downloadsLeft);
+        }
+
+        // Simulate file download (demo)
+        const blob = new Blob([
+          `Video: ${videoTitle}\n`,
+          `Duration: ${videoDuration}\n`,
+          `Downloaded from VideoStream Pro\n`,
+          `Date: ${new Date().toLocaleString()}\n`
+        ], { type: 'video/mp4' });
+        
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}.mp4`;
+        a.download = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -103,7 +128,7 @@ export default function DownloadButton({
         throw new Error(data.error || 'Download failed');
       }
     } catch (error: any) {
-      console.error('Download error:', error);
+      console.error('❌ Download error:', error);
       setDownloadStatus('error');
       setMessage(error.message || 'Download failed. Please try again.');
       toast.error(error.message || 'Download failed');
@@ -130,6 +155,9 @@ export default function DownloadButton({
 
   const getLimitText = () => {
     if (userPlan !== 'free') return '✨ Unlimited downloads';
+    if (downloadsLeft !== '?' && downloadsLeft !== undefined) {
+      return `🆓 ${downloadsLeft} download${downloadsLeft === 1 ? '' : 's'} left today`;
+    }
     return '🆓 1 download/day';
   };
 
