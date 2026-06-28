@@ -4,6 +4,7 @@ import User from '@/models/User';
 import { sendEmailOTP, sendSMSOTP, generateOTP } from '@/lib/email';
 import { getLocationFromIP, getOTPMethod } from '@/lib/location';
 
+// Store OTPs globally (use Redis in production)
 declare global {
   var _otps: Record<string, { otp: string; expiresAt: number }>;
 }
@@ -14,50 +15,54 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const { emailOrPhone, password } = await req.json();
 
-    console.log('🔐 Login attempt:', { emailOrPhone });
+    console.log(`🔐 Login attempt: ${emailOrPhone}`);
 
     if (!emailOrPhone || !password) {
       return NextResponse.json({ error: 'Email/Phone and password required' }, { status: 400 });
     }
 
+    // Find user
     const user = await User.findOne({
       $or: [{ email: emailOrPhone }, { phone: emailOrPhone }],
     });
 
     if (!user) {
+      console.log(`❌ User not found: ${emailOrPhone}`);
       return NextResponse.json({ error: 'User not found. Please register first.' }, { status: 401 });
     }
 
+    // Verify password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log(`❌ Invalid password for: ${emailOrPhone}`);
       return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
     }
 
-    // Get location
+    // Get location and determine OTP method
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
     const location = await getLocationFromIP(ip);
     const method = getOTPMethod(location);
 
+    console.log(`📍 Location: ${location.city}, ${location.state}`);
+    console.log(`📧 OTP Method: ${method}`);
+
     // Generate OTP
     const otp = generateOTP();
     const userId = user._id.toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000;
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
+    // Store OTP
     global._otps[userId] = { otp, expiresAt };
 
-    console.log('\n' + '='.repeat(50));
-    console.log(`🔐 LOGIN: ${emailOrPhone}`);
-    console.log(`📍 LOCATION: ${location.city}, ${location.state}`);
-    console.log(`📧 OTP METHOD: ${method.toUpperCase()}`);
-    console.log(`🔑 OTP CODE: ${otp}`);
-    console.log(`📧 Sending to: ${method === 'email' ? user.email : user.phone}`);
-    console.log('='.repeat(50) + '\n');
+    console.log(`🔑 OTP: ${otp}`);
+    console.log(`⏰ Expires at: ${new Date(expiresAt).toLocaleString()}`);
 
-    // Send OTP
+    // Send OTP based on location
+    let otpSent = false;
     if (method === 'email') {
-      await sendEmailOTP(user.email, otp);
+      otpSent = await sendEmailOTP(user.email, otp);
     } else {
-      await sendSMSOTP(user.phone || '9876543210', otp);
+      otpSent = await sendSMSOTP(user.phone || '9876543210', otp);
     }
 
     return NextResponse.json({
@@ -65,7 +70,7 @@ export async function POST(req: NextRequest) {
       message: `OTP sent to your ${method}`,
       userId: userId,
       method,
-      otp: otp,
+      otp: otp, // FOR TESTING ONLY - REMOVE IN PRODUCTION
     });
   } catch (error: any) {
     console.error('Login error:', error);
