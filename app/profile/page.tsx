@@ -15,8 +15,16 @@ interface Download {
   downloadedAt: string;
 }
 
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  plan: string;
+  createdAt: string;
+}
+
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloads, setDownloads] = useState<Download[]>([]);
   const [stats, setStats] = useState({
@@ -24,24 +32,32 @@ export default function ProfilePage() {
     totalDownloads: 0,
     plan: 'free',
   });
-  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
+  // Load user and downloads on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
+    
     if (!token || !savedUser) {
       router.push('/login');
-    } else {
-      setUser(JSON.parse(savedUser));
-      fetchDownloads(token);
+      return;
     }
+
+    try {
+      const userData = JSON.parse(savedUser);
+      setUser(userData);
+      fetchDownloads(token);
+    } catch (e) {
+      console.error('Error parsing user:', e);
+      router.push('/login');
+    }
+    
     setLoading(false);
   }, []);
 
   const fetchDownloads = async (token: string) => {
     try {
-      setRefreshing(true);
       console.log('📥 Fetching downloads...');
       
       const res = await fetch('/api/download', {
@@ -52,7 +68,7 @@ export default function ProfilePage() {
       });
       
       const data = await res.json();
-      console.log('📥 Downloads response:', data);
+      console.log('📥 Downloads API response:', data);
       
       if (data.success) {
         setDownloads(data.downloads || []);
@@ -62,28 +78,24 @@ export default function ProfilePage() {
           plan: data.plan || 'free',
         });
         
-        // Update localStorage
+        // Update localStorage with fresh data
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
           const userData = JSON.parse(savedUser);
           userData.downloadedVideos = data.downloads || [];
+          userData.downloadsToday = data.downloadsToday || 0;
           localStorage.setItem('user', JSON.stringify(userData));
         }
         
         console.log(`✅ Loaded ${data.downloads?.length || 0} downloads`);
+        if (data.downloads && data.downloads.length > 0) {
+          console.log('📥 First download:', data.downloads[0]);
+        }
+      } else {
+        console.error('❌ API error:', data.error);
       }
     } catch (error) {
       console.error('❌ Failed to fetch downloads:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const handleRefresh = () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetchDownloads(token);
-      toast.success('Refreshed');
     }
   };
 
@@ -93,16 +105,37 @@ export default function ProfilePage() {
     router.push('/login');
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (!user) return null;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-IN', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      <Navbar/>
+      <Navbar  />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
-          {/* Header */}
+          {/* Profile Header */}
           <div className="flex items-center gap-6 flex-wrap mb-6">
             <div className="text-6xl">👤</div>
             <div>
@@ -115,6 +148,9 @@ export default function ProfilePage() {
                   user.plan === 'bronze' ? 'bg-amber-600 text-white' : 'bg-gray-600 text-white'
                 }`}>
                   {user.plan?.toUpperCase() || 'FREE'}
+                </span>
+                <span className="text-xs text-gray-400">
+                  📅 Joined {formatDate(user.createdAt)}
                 </span>
               </div>
             </div>
@@ -134,17 +170,6 @@ export default function ProfilePage() {
               <p className="text-2xl font-bold text-white uppercase">{user.plan}</p>
               <p className="text-xs text-gray-400">Current Plan</p>
             </div>
-          </div>
-
-          {/* Refresh Button */}
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white transition disabled:opacity-50"
-            >
-              {refreshing ? '🔄 Loading...' : '🔄 Refresh Downloads'}
-            </button>
           </div>
 
           {/* Downloads Section */}
@@ -172,7 +197,7 @@ export default function ProfilePage() {
                         <p className="text-white text-sm font-medium truncate">{download.videoTitle}</p>
                         <div className="flex gap-3 text-xs text-gray-400">
                           <span>⏱️ {download.videoDuration}</span>
-                          <span>📅 {new Date(download.downloadedAt).toLocaleDateString()}</span>
+                          <span>📅 {formatDate(download.downloadedAt)}</span>
                         </div>
                       </div>
                     </div>

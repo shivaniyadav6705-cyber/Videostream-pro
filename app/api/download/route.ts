@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 // GET endpoint - Fetch user's downloads
 export async function GET(req: NextRequest) {
   try {
-    console.log('📥 GET Downloads API called');
+    console.log('📥 GET Downloads API STARTED');
 
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
     }
 
     console.log(`👤 User: ${user.username}`);
-    console.log(`📥 Downloads: ${user.downloadedVideos?.length || 0}`);
+    console.log(`📥 Downloads in DB: ${user.downloadedVideos?.length || 0}`);
+    console.log(`📋 Plan: ${user.plan}`);
 
     return NextResponse.json({
       success: true,
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
 // POST endpoint - Add a download
 export async function POST(req: NextRequest) {
   try {
-    console.log('📥 POST Download API called');
+    console.log('📥 POST Download API STARTED');
 
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
@@ -128,6 +129,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`✅ Download saved: ${videoTitle}`);
     console.log(`📊 Total downloads: ${user.downloadedVideos.length}`);
+    console.log(`📊 Downloads today: ${user.downloadsToday}`);
 
     return NextResponse.json({
       success: true,
