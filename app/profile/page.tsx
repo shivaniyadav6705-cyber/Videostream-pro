@@ -18,6 +18,15 @@ interface User {
   downloadedVideos?: any[];
 }
 
+interface Download {
+  id: number;
+  videoId: string;
+  videoTitle: string;
+  videoDuration: string;
+  videoThumbnail: string;
+  downloadedAt: string;
+}
+
 interface PlanDetails {
   startDate: string;
   endDate: string;
@@ -28,7 +37,12 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [planDetails, setPlanDetails] = useState<PlanDetails | null>(null);
-  const [downloads, setDownloads] = useState<any[]>([]);
+  const [downloads, setDownloads] = useState<Download[]>([]);
+  const [stats, setStats] = useState({
+    downloadsToday: 0,
+    totalDownloads: 0,
+    plan: 'free',
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -76,15 +90,39 @@ export default function ProfilePage() {
 
   const fetchDownloads = async (token: string) => {
     try {
+      console.log('📥 Fetching downloads...');
+      
       const res = await fetch('/api/download', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
       });
+      
+      // Check if response is JSON
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        console.error('❌ Non-JSON response:', text.substring(0, 200));
+        return;
+      }
+      
       const data = await res.json();
+      console.log('📥 Downloads response:', data);
+      
       if (data.success) {
         setDownloads(data.downloads || []);
+        setStats({
+          downloadsToday: data.downloadsToday || 0,
+          totalDownloads: data.downloads?.length || 0,
+          plan: data.plan || 'free',
+        });
+        console.log(`✅ Loaded ${data.downloads?.length || 0} downloads`);
+      } else {
+        console.error('❌ Failed to fetch downloads:', data.error);
       }
     } catch (error) {
-      console.error('Failed to fetch downloads:', error);
+      console.error('❌ Failed to fetch downloads:', error);
     }
   };
 
@@ -109,9 +147,21 @@ export default function ProfilePage() {
 
   const planBadge = getPlanBadge();
 
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-IN', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      <Navbar />
+      <Navbar user={user} onLogout={handleLogout} />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Profile Card */}
@@ -126,8 +176,24 @@ export default function ProfilePage() {
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${planBadge.bg} ${planBadge.color}`}>
                   {planBadge.label}
                 </span>
-                <span className="text-xs text-gray-400">📅 Joined {new Date(user.createdAt).toLocaleDateString()}</span>
+                <span className="text-xs text-gray-400">📅 Joined {formatDate(user.createdAt)}</span>
               </div>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-slate-700/50 rounded-lg p-4 text-center">
+              <p className="text-2xl font-bold text-white">{stats.totalDownloads}</p>
+              <p className="text-xs text-gray-400">Total Downloads</p>
+            </div>
+            <div className="bg-slate-700/50 rounded-lg p-4 text-center">
+              <p className="text-2xl font-bold text-white">{stats.downloadsToday}</p>
+              <p className="text-xs text-gray-400">Today's Downloads</p>
+            </div>
+            <div className="bg-slate-700/50 rounded-lg p-4 text-center">
+              <p className="text-2xl font-bold text-white uppercase">{user.plan}</p>
+              <p className="text-xs text-gray-400">Current Plan</p>
             </div>
           </div>
 
@@ -171,23 +237,46 @@ export default function ProfilePage() {
 
           {/* Downloads Section */}
           <div className="mt-6">
-            <h2 className="text-lg font-semibold text-white mb-4">📥 Downloads ({downloads.length})</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-white">📥 Downloads</h2>
+              <span className="text-xs text-gray-400">{downloads.length} items</span>
+            </div>
+            
             {downloads.length === 0 ? (
-              <p className="text-gray-400 text-sm">No downloads yet. Start watching and download your favorite videos!</p>
+              <div className="bg-slate-700/30 rounded-lg p-8 text-center">
+                <div className="text-4xl mb-3">📭</div>
+                <p className="text-gray-400 text-sm">No downloads yet.</p>
+                <p className="text-gray-500 text-xs mt-1">Download videos to see them here!</p>
+                <Link href="/watch" className="inline-block mt-3 text-blue-400 hover:text-blue-300 text-sm">
+                  Browse Videos →
+                </Link>
+              </div>
             ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {downloads.slice(0, 5).map((download: any) => (
-                  <div key={download.id} className="bg-slate-700/30 rounded-lg p-3 flex justify-between items-center">
-                    <div>
-                      <p className="text-white text-sm">{download.videoTitle}</p>
-                      <p className="text-xs text-gray-400">{new Date(download.downloadedAt).toLocaleDateString()}</p>
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
+                {downloads.map((download: Download) => (
+                  <div key={download.id} className="bg-slate-700/30 rounded-lg p-3 flex justify-between items-center hover:bg-slate-700/50 transition">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{download.videoThumbnail || '🎬'}</span>
+                      <div>
+                        <p className="text-white text-sm font-medium">{download.videoTitle}</p>
+                        <div className="flex gap-3 text-xs text-gray-400">
+                          <span>⏱️ {download.videoDuration}</span>
+                          <span>📅 {formatDate(download.downloadedAt)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-500">📥 {download.videoDuration}</span>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          toast.success(`Playing: ${download.videoTitle}`);
+                        }}
+                        className="text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white transition"
+                      >
+                        ▶️ Play
+                      </button>
+                    </div>
                   </div>
                 ))}
-                {downloads.length > 5 && (
-                  <p className="text-xs text-gray-400 text-center">+ {downloads.length - 5} more downloads</p>
-                )}
               </div>
             )}
           </div>
