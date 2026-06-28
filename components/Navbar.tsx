@@ -266,13 +266,7 @@ export default function Navbar() {
                     >
                       <span>👤</span> My Profile
                     </Link>
-                    <Link
-                      href="/downloads"
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 transition"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      <span>📥</span> My Downloads
-                    </Link>
+                    
                     <Link
                       href="/upgrade"
                       className="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 transition"
@@ -280,13 +274,7 @@ export default function Navbar() {
                     >
                       <span>💎</span> Upgrade Plan
                     </Link>
-                    <Link
-                      href="/settings"
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 transition"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      <span>⚙️</span> Settings
-                    </Link>
+                    
                     <hr className="border-slate-700" />
                     <button
                       onClick={handleLogout}
