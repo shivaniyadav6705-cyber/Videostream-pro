@@ -8,13 +8,15 @@ interface DownloadButtonProps {
   videoTitle: string;
   videoDuration?: string;
   videoThumbnail?: string;
+  videoUrl?: string;
 }
 
 export default function DownloadButton({ 
   videoId, 
   videoTitle, 
   videoDuration = "10:00",
-  videoThumbnail = "🎬"
+  videoThumbnail = "🎬",
+  videoUrl
 }: DownloadButtonProps) {
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
@@ -40,12 +42,12 @@ export default function DownloadButton({
     }
 
     setDownloadStatus('downloading');
-    setMessage('Preparing download...');
+    setMessage('Processing download...');
 
     const token = localStorage.getItem('token');
 
     try {
-      console.log('📥 Sending download request for:', videoTitle);
+      console.log('📥 Downloading:', videoTitle);
 
       const response = await fetch('/api/download', {
         method: 'POST',
@@ -61,14 +63,6 @@ export default function DownloadButton({
         }),
       });
 
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('❌ Non-JSON response:', text.substring(0, 200));
-        throw new Error('Server returned HTML instead of JSON. Please try again.');
-      }
-
       const data = await response.json();
       console.log('📥 Download response:', data);
 
@@ -79,42 +73,37 @@ export default function DownloadButton({
       if (data.success) {
         setDownloadStatus('success');
         setMessage(`✅ ${videoTitle} downloaded!`);
-        toast.success(`${videoTitle} downloaded successfully!`);
+        toast.success(`${videoTitle} downloaded!`);
 
-        // Update user's downloaded videos in localStorage
+        // Update localStorage
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
           const user = JSON.parse(savedUser);
-          const newDownload = {
-            id: Date.now(),
-            videoId,
-            videoTitle,
-            videoDuration,
-            videoThumbnail,
-            downloadedAt: new Date().toISOString(),
-          };
-          const updatedDownloads = [newDownload, ...(user.downloadedVideos || [])];
-          user.downloadedVideos = updatedDownloads;
+          user.downloadedVideos = data.downloads || [];
           localStorage.setItem('user', JSON.stringify(user));
         }
 
-        // Update downloads left
         if (data.downloadsLeft !== undefined) {
           setDownloadsLeft(data.downloadsLeft);
         }
 
-        // Simulate file download (demo)
-        const blob = new Blob([
-          `Video: ${videoTitle}\n`,
-          `Duration: ${videoDuration}\n`,
-          `Downloaded from VideoStream Pro\n`,
-          `Date: ${new Date().toLocaleString()}\n`
-        ], { type: 'video/mp4' });
+        // For demo: Create a sample video file (simulated download)
+        // In production, this would download the actual video
+        const videoContent = `
+          Video: ${videoTitle}
+          Duration: ${videoDuration}
+          Downloaded from VideoStream Pro
+          Date: ${new Date().toLocaleString()}
+          --------------------------------
+          This is a demo video file. 
+          In production, this would be the actual video content.
+        `;
         
+        const blob = new Blob([videoContent], { type: 'video/mp4' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}.txt`;
+        a.download = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}.mp4`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -130,7 +119,7 @@ export default function DownloadButton({
     } catch (error: any) {
       console.error('❌ Download error:', error);
       setDownloadStatus('error');
-      setMessage(error.message || 'Download failed. Please try again.');
+      setMessage(error.message || 'Download failed');
       toast.error(error.message || 'Download failed');
       
       setTimeout(() => {
@@ -156,9 +145,9 @@ export default function DownloadButton({
   const getLimitText = () => {
     if (userPlan !== 'free') return '✨ Unlimited downloads';
     if (downloadsLeft !== '?' && downloadsLeft !== undefined) {
-      return `🆓 ${downloadsLeft} download${downloadsLeft === 1 ? '' : 's'} left today`;
+      return `🆓 ${downloadsLeft} left today`;
     }
-    return '🆓 1 download/day';
+    return '🆓 1/day';
   };
 
   return (

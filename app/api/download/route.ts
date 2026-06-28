@@ -18,16 +18,7 @@ export async function GET(req: NextRequest) {
       }, { status: 401 });
     }
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    } catch (jwtError: any) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid token' 
-      }, { status: 401 });
-    }
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     await connectDB();
 
     const user = await User.findById(decoded.userId);
@@ -68,30 +59,13 @@ export async function POST(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ 
         success: false, 
-        error: 'No token provided. Please login first.' 
+        error: 'No token provided' 
       }, { status: 401 });
     }
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    } catch (jwtError: any) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid token. Please login again.' 
-      }, { status: 401 });
-    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
-    let body;
-    try {
-      body = await req.json();
-    } catch (parseError: any) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid request body' 
-      }, { status: 400 });
-    }
-
+    const body = await req.json();
     const { videoId, videoTitle, videoDuration, videoThumbnail } = body;
 
     if (!videoTitle) {
@@ -130,7 +104,7 @@ export async function POST(req: NextRequest) {
     if (user.downloadsToday >= limit) {
       return NextResponse.json({ 
         success: false, 
-        error: `Daily download limit reached (${limit}/day)` 
+        error: `Daily limit reached (${limit}/day)` 
       }, { status: 403 });
     }
 
@@ -144,7 +118,6 @@ export async function POST(req: NextRequest) {
       downloadedAt: new Date().toISOString(),
     };
 
-    // Add to user's downloads
     if (!user.downloadedVideos) {
       user.downloadedVideos = [];
     }
@@ -170,7 +143,7 @@ export async function POST(req: NextRequest) {
     console.error('❌ Download error:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error.message || 'Download failed' 
+      error: error.message 
     }, { status: 500 });
   }
 }
