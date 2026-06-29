@@ -31,11 +31,14 @@ export async function GET(req: NextRequest) {
 
     console.log(`👤 User: ${user.username}`);
     console.log(`📥 Downloads in DB: ${user.downloadedVideos?.length || 0}`);
-    console.log(`📋 Plan: ${user.plan}`);
+    console.log('📥 Downloads data:', JSON.stringify(user.downloadedVideos, null, 2));
+
+    // Always return an array
+    const downloads = user.downloadedVideos || [];
 
     return NextResponse.json({
       success: true,
-      downloads: user.downloadedVideos || [],
+      downloads: downloads,
       downloadsToday: user.downloadsToday || 0,
       plan: user.plan,
     });
@@ -68,6 +71,8 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { videoId, videoTitle, videoDuration, videoThumbnail } = body;
+
+    console.log('📦 Request body:', body);
 
     if (!videoTitle) {
       return NextResponse.json({ 
@@ -119,6 +124,8 @@ export async function POST(req: NextRequest) {
       downloadedAt: new Date().toISOString(),
     };
 
+    console.log('📝 Creating download record:', downloadRecord);
+
     if (!user.downloadedVideos) {
       user.downloadedVideos = [];
     }
@@ -129,7 +136,6 @@ export async function POST(req: NextRequest) {
 
     console.log(`✅ Download saved: ${videoTitle}`);
     console.log(`📊 Total downloads: ${user.downloadedVideos.length}`);
-    console.log(`📊 Downloads today: ${user.downloadsToday}`);
 
     return NextResponse.json({
       success: true,

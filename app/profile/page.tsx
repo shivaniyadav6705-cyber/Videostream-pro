@@ -15,16 +15,8 @@ interface Download {
   downloadedAt: string;
 }
 
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  plan: string;
-  createdAt: string;
-}
-
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [downloads, setDownloads] = useState<Download[]>([]);
   const [stats, setStats] = useState({
@@ -34,7 +26,6 @@ export default function ProfilePage() {
   });
   const router = useRouter();
 
-  // Load user and downloads on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
@@ -47,7 +38,7 @@ export default function ProfilePage() {
     try {
       const userData = JSON.parse(savedUser);
       setUser(userData);
-      fetchDownloads(token);
+      loadDownloads(token);
     } catch (e) {
       console.error('Error parsing user:', e);
       router.push('/login');
@@ -56,19 +47,18 @@ export default function ProfilePage() {
     setLoading(false);
   }, []);
 
-  const fetchDownloads = async (token: string) => {
+  const loadDownloads = async (token: string) => {
     try {
-      console.log('📥 Fetching downloads...');
+      console.log('📥 Loading downloads...');
       
       const res = await fetch('/api/download', {
         headers: { 
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
         }
       });
       
       const data = await res.json();
-      console.log('📥 Downloads API response:', data);
+      console.log('📥 Response:', data);
       
       if (data.success) {
         setDownloads(data.downloads || []);
@@ -77,25 +67,14 @@ export default function ProfilePage() {
           totalDownloads: data.downloads?.length || 0,
           plan: data.plan || 'free',
         });
-        
-        // Update localStorage with fresh data
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-          const userData = JSON.parse(savedUser);
-          userData.downloadedVideos = data.downloads || [];
-          userData.downloadsToday = data.downloadsToday || 0;
-          localStorage.setItem('user', JSON.stringify(userData));
-        }
-        
-        console.log(`✅ Loaded ${data.downloads?.length || 0} downloads`);
-        if (data.downloads && data.downloads.length > 0) {
-          console.log('📥 First download:', data.downloads[0]);
-        }
+        toast.success(`Loaded ${data.downloads?.length || 0} downloads`);
       } else {
-        console.error('❌ API error:', data.error);
+        console.error('❌ Error:', data.error);
+        toast.error('Failed to load downloads');
       }
     } catch (error) {
-      console.error('❌ Failed to fetch downloads:', error);
+      console.error('❌ Fetch error:', error);
+      toast.error('Error loading downloads');
     }
   };
 
@@ -105,17 +84,8 @@ export default function ProfilePage() {
     router.push('/login');
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="text-white">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
+  if (loading) return <div className="text-white text-center py-20">Loading...</div>;
+  if (!user) return null;
 
   const formatDate = (dateString: string) => {
     try {
@@ -131,11 +101,11 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      <Navbar  />
+      <Navbar user={user} onLogout={handleLogout} />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
-          {/* Profile Header */}
+          {/* Header */}
           <div className="flex items-center gap-6 flex-wrap mb-6">
             <div className="text-6xl">👤</div>
             <div>
@@ -148,9 +118,6 @@ export default function ProfilePage() {
                   user.plan === 'bronze' ? 'bg-amber-600 text-white' : 'bg-gray-600 text-white'
                 }`}>
                   {user.plan?.toUpperCase() || 'FREE'}
-                </span>
-                <span className="text-xs text-gray-400">
-                  📅 Joined {formatDate(user.createdAt)}
                 </span>
               </div>
             </div>
@@ -177,12 +144,22 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-white">📥 My Downloads</h2>
               <span className="text-xs text-gray-400">{downloads.length} items</span>
+              <button
+                onClick={() => {
+                  const token = localStorage.getItem('token');
+                  if (token) loadDownloads(token);
+                }}
+                className="text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white"
+              >
+                🔄 Refresh
+              </button>
             </div>
             
             {downloads.length === 0 ? (
               <div className="bg-slate-700/30 rounded-lg p-8 text-center">
                 <div className="text-4xl mb-3">📭</div>
                 <p className="text-gray-400 text-sm">No downloads yet.</p>
+                <p className="text-gray-500 text-xs mt-1">Download videos to see them here!</p>
                 <Link href="/watch" className="inline-block mt-3 text-blue-400 hover:text-blue-300 text-sm">
                   Browse Videos →
                 </Link>
