@@ -7,19 +7,41 @@ export async function GET(req: NextRequest) {
   try {
     console.log('🔍 DEBUG DOWNLOADS API CALLED');
 
+    // Get token from Authorization header
     const authHeader = req.headers.get('authorization');
+    console.log('📝 Auth Header:', authHeader);
+
     const token = authHeader?.split(' ')[1];
+    console.log('🔑 Token:', token ? 'Present' : 'Missing');
 
     if (!token) {
-      return NextResponse.json({ error: 'No token' }, { status: 401 });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'No token provided. Please login first.' 
+      }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    // Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      console.log('👤 User ID from token:', decoded.userId);
+    } catch (jwtError: any) {
+      console.error('❌ JWT Error:', jwtError.message);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid token. Please login again.' 
+      }, { status: 401 });
+    }
+
     await connectDB();
 
     const user = await User.findById(decoded.userId);
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User not found' 
+      }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -28,17 +50,9 @@ export async function GET(req: NextRequest) {
       username: user.username,
       email: user.email,
       plan: user.plan,
-      downloadsToday: user.downloadsToday,
-      lastDownloadDate: user.lastDownloadDate,
+      downloadsToday: user.downloadsToday || 0,
       downloadedVideos: user.downloadedVideos || [],
       downloadedVideosCount: user.downloadedVideos?.length || 0,
-      allUserData: {
-        downloadedVideos: user.downloadedVideos,
-        downloadsToday: user.downloadsToday,
-        plan: user.plan,
-        username: user.username,
-        email: user.email,
-      }
     });
 
   } catch (error: any) {

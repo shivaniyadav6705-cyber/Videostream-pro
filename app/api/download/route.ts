@@ -11,14 +11,28 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
 
+    console.log('🔑 Token present:', !!token);
+
     if (!token) {
       return NextResponse.json({ 
         success: false, 
-        error: 'No token provided' 
+        error: 'No token provided. Please login first.' 
       }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    // Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      console.log('👤 User ID from token:', decoded.userId);
+    } catch (jwtError: any) {
+      console.error('❌ JWT Error:', jwtError.message);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid token. Please login again.' 
+      }, { status: 401 });
+    }
+
     await connectDB();
 
     const user = await User.findById(decoded.userId);
@@ -30,15 +44,11 @@ export async function GET(req: NextRequest) {
     }
 
     console.log(`👤 User: ${user.username}`);
-    console.log(`📥 Downloads in DB: ${user.downloadedVideos?.length || 0}`);
-    console.log('📥 Downloads data:', JSON.stringify(user.downloadedVideos, null, 2));
-
-    // Always return an array
-    const downloads = user.downloadedVideos || [];
+    console.log(`📥 Downloads: ${user.downloadedVideos?.length || 0}`);
 
     return NextResponse.json({
       success: true,
-      downloads: downloads,
+      downloads: user.downloadedVideos || [],
       downloadsToday: user.downloadsToday || 0,
       plan: user.plan,
     });
@@ -71,8 +81,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { videoId, videoTitle, videoDuration, videoThumbnail } = body;
-
-    console.log('📦 Request body:', body);
 
     if (!videoTitle) {
       return NextResponse.json({ 
@@ -123,8 +131,6 @@ export async function POST(req: NextRequest) {
       videoThumbnail: videoThumbnail || '🎬',
       downloadedAt: new Date().toISOString(),
     };
-
-    console.log('📝 Creating download record:', downloadRecord);
 
     if (!user.downloadedVideos) {
       user.downloadedVideos = [];

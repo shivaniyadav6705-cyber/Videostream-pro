@@ -30,6 +30,9 @@ export default function ProfilePage() {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     
+    console.log('🔑 Token exists:', !!token);
+    console.log('👤 User exists:', !!savedUser);
+
     if (!token || !savedUser) {
       router.push('/login');
       return;
@@ -38,7 +41,7 @@ export default function ProfilePage() {
     try {
       const userData = JSON.parse(savedUser);
       setUser(userData);
-      loadDownloads(token);
+      fetchDownloads(token);
     } catch (e) {
       console.error('Error parsing user:', e);
       router.push('/login');
@@ -47,18 +50,21 @@ export default function ProfilePage() {
     setLoading(false);
   }, []);
 
-  const loadDownloads = async (token: string) => {
+  const fetchDownloads = async (token: string) => {
     try {
-      console.log('📥 Loading downloads...');
+      console.log('📥 Fetching downloads with token:', token.substring(0, 20) + '...');
       
       const res = await fetch('/api/download', {
         headers: { 
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         }
       });
       
+      console.log('📥 Response status:', res.status);
+      
       const data = await res.json();
-      console.log('📥 Response:', data);
+      console.log('📥 Downloads API response:', data);
       
       if (data.success) {
         setDownloads(data.downloads || []);
@@ -67,10 +73,20 @@ export default function ProfilePage() {
           totalDownloads: data.downloads?.length || 0,
           plan: data.plan || 'free',
         });
-        toast.success(`Loaded ${data.downloads?.length || 0} downloads`);
+        
+        // Update localStorage
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          const userData = JSON.parse(savedUser);
+          userData.downloadedVideos = data.downloads || [];
+          userData.downloadsToday = data.downloadsToday || 0;
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+        
+        console.log(`✅ Loaded ${data.downloads?.length || 0} downloads`);
       } else {
-        console.error('❌ Error:', data.error);
-        toast.error('Failed to load downloads');
+        console.error('❌ API error:', data.error);
+        toast.error(data.error || 'Failed to load downloads');
       }
     } catch (error) {
       console.error('❌ Fetch error:', error);
@@ -101,7 +117,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      <Navbar/>
+      <Navbar />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
@@ -144,15 +160,6 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-white">📥 My Downloads</h2>
               <span className="text-xs text-gray-400">{downloads.length} items</span>
-              <button
-                onClick={() => {
-                  const token = localStorage.getItem('token');
-                  if (token) loadDownloads(token);
-                }}
-                className="text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white"
-              >
-                🔄 Refresh
-              </button>
             </div>
             
             {downloads.length === 0 ? (
