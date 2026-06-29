@@ -101,7 +101,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      <Navbar user={user} onLogout={handleLogout} />
+      <Navbar/>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
