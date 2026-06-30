@@ -41,6 +41,7 @@ export default function ProfilePage() {
     try {
       const userData = JSON.parse(savedUser);
       setUser(userData);
+      // Load downloads immediately
       fetchDownloads(token);
     } catch (e) {
       console.error('Error parsing user:', e);
@@ -52,16 +53,15 @@ export default function ProfilePage() {
 
   const fetchDownloads = async (token: string) => {
     try {
-      console.log('📥 Fetching downloads with token:', token.substring(0, 20) + '...');
+      console.log('📥 Fetching downloads...');
       
       const res = await fetch('/api/download', {
+        method: 'GET',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         }
       });
-      
-      console.log('📥 Response status:', res.status);
       
       const data = await res.json();
       console.log('📥 Downloads API response:', data);
@@ -73,16 +73,6 @@ export default function ProfilePage() {
           totalDownloads: data.downloads?.length || 0,
           plan: data.plan || 'free',
         });
-        
-        // Update localStorage
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-          const userData = JSON.parse(savedUser);
-          userData.downloadedVideos = data.downloads || [];
-          userData.downloadsToday = data.downloadsToday || 0;
-          localStorage.setItem('user', JSON.stringify(userData));
-        }
-        
         console.log(`✅ Loaded ${data.downloads?.length || 0} downloads`);
       } else {
         console.error('❌ API error:', data.error);

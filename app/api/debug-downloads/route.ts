@@ -7,12 +7,11 @@ export async function GET(req: NextRequest) {
   try {
     console.log('🔍 DEBUG DOWNLOADS API CALLED');
 
-    // Get token from Authorization header
     const authHeader = req.headers.get('authorization');
     console.log('📝 Auth Header:', authHeader);
 
     const token = authHeader?.split(' ')[1];
-    console.log('🔑 Token:', token ? 'Present' : 'Missing');
+    console.log('🔑 Token:', token ? 'Present (first 20 chars: ' + token.substring(0, 20) + '...)' : 'Missing');
 
     if (!token) {
       return NextResponse.json({ 
@@ -43,6 +42,9 @@ export async function GET(req: NextRequest) {
         error: 'User not found' 
       }, { status: 404 });
     }
+
+    console.log(`👤 User: ${user.username}`);
+    console.log(`📥 Downloads: ${user.downloadedVideos?.length || 0}`);
 
     return NextResponse.json({
       success: true,

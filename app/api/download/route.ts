@@ -3,20 +3,20 @@ import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import jwt from 'jsonwebtoken';
 
-// GET endpoint - Fetch user's downloads
+// ============================================
+// GET - Fetch all downloads for the user
+// ============================================
 export async function GET(req: NextRequest) {
   try {
-    console.log('📥 GET Downloads API STARTED');
+    console.log('📥 GET Downloads API called');
 
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
 
-    console.log('🔑 Token present:', !!token);
-
     if (!token) {
       return NextResponse.json({ 
         success: false, 
-        error: 'No token provided. Please login first.' 
+        error: 'No token provided' 
       }, { status: 401 });
     }
 
@@ -24,12 +24,10 @@ export async function GET(req: NextRequest) {
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      console.log('👤 User ID from token:', decoded.userId);
     } catch (jwtError: any) {
-      console.error('❌ JWT Error:', jwtError.message);
       return NextResponse.json({ 
         success: false, 
-        error: 'Invalid token. Please login again.' 
+        error: 'Invalid token' 
       }, { status: 401 });
     }
 
@@ -44,7 +42,7 @@ export async function GET(req: NextRequest) {
     }
 
     console.log(`👤 User: ${user.username}`);
-    console.log(`📥 Downloads: ${user.downloadedVideos?.length || 0}`);
+    console.log(`📥 Downloads in DB: ${user.downloadedVideos?.length || 0}`);
 
     return NextResponse.json({
       success: true,
@@ -62,10 +60,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST endpoint - Add a download
+// ============================================
+// POST - Save a new download
+// ============================================
 export async function POST(req: NextRequest) {
   try {
-    console.log('📥 POST Download API STARTED');
+    console.log('📥 POST Download API called');
 
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check download limit
+    // Check daily limit
     const today = new Date().toDateString();
     if (user.lastDownloadDate !== today) {
       user.downloadsToday = 0;
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Download error:', error);
+    console.error('❌ POST Download error:', error);
     return NextResponse.json({ 
       success: false, 
       error: error.message 
