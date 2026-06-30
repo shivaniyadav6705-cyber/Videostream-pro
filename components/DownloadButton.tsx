@@ -8,21 +8,18 @@ interface DownloadButtonProps {
   videoTitle: string;
   videoDuration?: string;
   videoThumbnail?: string;
-  videoUrl?: string;
 }
 
 export default function DownloadButton({ 
   videoId, 
   videoTitle, 
   videoDuration = "10:00",
-  videoThumbnail = "🎬",
-  videoUrl
+  videoThumbnail = "🎬"
 }: DownloadButtonProps) {
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [userPlan, setUserPlan] = useState<string>('free');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [downloadsLeft, setDownloadsLeft] = useState<number | string>('?');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -75,35 +72,36 @@ export default function DownloadButton({
         setMessage(`✅ ${videoTitle} downloaded!`);
         toast.success(`${videoTitle} downloaded!`);
 
-        // Update localStorage
+        // Update localStorage with the new download
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
           const user = JSON.parse(savedUser);
-          user.downloadedVideos = data.downloads || [];
+          // Add new download to the front of the array
+          const newDownload = {
+            id: Date.now(),
+            videoId,
+            videoTitle,
+            videoDuration,
+            videoThumbnail,
+            downloadedAt: new Date().toISOString(),
+          };
+          const updatedDownloads = [newDownload, ...(user.downloadedVideos || [])];
+          user.downloadedVideos = updatedDownloads;
           localStorage.setItem('user', JSON.stringify(user));
         }
 
-        if (data.downloadsLeft !== undefined) {
-          setDownloadsLeft(data.downloadsLeft);
-        }
-
-        // For demo: Create a sample video file (simulated download)
-        // In production, this would download the actual video
-        const videoContent = `
-          Video: ${videoTitle}
-          Duration: ${videoDuration}
-          Downloaded from VideoStream Pro
-          Date: ${new Date().toLocaleString()}
-          --------------------------------
-          This is a demo video file. 
-          In production, this would be the actual video content.
-        `;
+        // Simulate file download (demo)
+        const blob = new Blob([
+          `Video: ${videoTitle}\n`,
+          `Duration: ${videoDuration}\n`,
+          `Downloaded from VideoStream Pro\n`,
+          `Date: ${new Date().toLocaleString()}\n`
+        ], { type: 'video/mp4' });
         
-        const blob = new Blob([videoContent], { type: 'video/mp4' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}.mp4`;
+        a.download = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -142,14 +140,6 @@ export default function DownloadButton({
     return 'bg-blue-600 hover:bg-blue-700';
   };
 
-  const getLimitText = () => {
-    if (userPlan !== 'free') return '✨ Unlimited downloads';
-    if (downloadsLeft !== '?' && downloadsLeft !== undefined) {
-      return `🆓 ${downloadsLeft} left today`;
-    }
-    return '🆓 1/day';
-  };
-
   return (
     <div className="mt-3">
       <button
@@ -164,9 +154,6 @@ export default function DownloadButton({
           {message}
         </p>
       )}
-      <p className="text-xs text-gray-400 text-center mt-1">
-        {getLimitText()}
-      </p>
     </div>
   );
 }
