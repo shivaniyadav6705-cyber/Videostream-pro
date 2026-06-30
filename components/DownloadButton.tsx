@@ -20,6 +20,7 @@ export default function DownloadButton({
   const [message, setMessage] = useState('');
   const [userPlan, setUserPlan] = useState<string>('free');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [downloadCount, setDownloadCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -28,6 +29,7 @@ export default function DownloadButton({
       setIsLoggedIn(true);
       const user = JSON.parse(savedUser);
       setUserPlan(user.plan || 'free');
+      setDownloadCount(user.downloadsToday || 0);
     }
   }, []);
 
@@ -72,36 +74,32 @@ export default function DownloadButton({
         setMessage(`✅ ${videoTitle} downloaded!`);
         toast.success(`${videoTitle} downloaded!`);
 
-        // Update localStorage with the new download
+        // Update localStorage
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
           const user = JSON.parse(savedUser);
-          // Add new download to the front of the array
-          const newDownload = {
-            id: Date.now(),
-            videoId,
-            videoTitle,
-            videoDuration,
-            videoThumbnail,
-            downloadedAt: new Date().toISOString(),
-          };
-          const updatedDownloads = [newDownload, ...(user.downloadedVideos || [])];
-          user.downloadedVideos = updatedDownloads;
+          user.downloadedVideos = data.downloads || [];
+          user.downloadsToday = data.downloadsToday || 0;
           localStorage.setItem('user', JSON.stringify(user));
+          setDownloadCount(data.downloadsToday || 0);
         }
 
-        // Simulate file download (demo)
-        const blob = new Blob([
-          `Video: ${videoTitle}\n`,
-          `Duration: ${videoDuration}\n`,
-          `Downloaded from VideoStream Pro\n`,
-          `Date: ${new Date().toLocaleString()}\n`
-        ], { type: 'video/mp4' });
+        // ✅ CORRECT: Create a proper video file (simulated)
+        const videoContent = `
+          Video: ${videoTitle}
+          Duration: ${videoDuration}
+          Downloaded from VideoStream Pro
+          Date: ${new Date().toLocaleString()}
+          ----------------------------------------
+          This is a demo video file. In production, 
+          this would be the actual video content.
+        `;
         
+        const blob = new Blob([videoContent], { type: 'video/mp4' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}.txt`;
+        a.download = `${videoTitle.replace(/[^a-z0-9]/gi, '_')}.mp4`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -140,6 +138,11 @@ export default function DownloadButton({
     return 'bg-blue-600 hover:bg-blue-700';
   };
 
+  const getLimitText = () => {
+    if (userPlan !== 'free') return '✨ Unlimited downloads';
+    return `🆓 ${downloadCount}/1 downloads today`;
+  };
+
   return (
     <div className="mt-3">
       <button
@@ -154,6 +157,9 @@ export default function DownloadButton({
           {message}
         </p>
       )}
+      <p className="text-xs text-gray-400 text-center mt-1">
+        {getLimitText()}
+      </p>
     </div>
   );
 }

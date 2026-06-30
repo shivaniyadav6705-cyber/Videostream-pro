@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 }
 
 // ============================================
-// POST - Save a new download - FIXED
+// POST - Save a new download
 // ============================================
 export async function POST(req: NextRequest) {
   try {
@@ -60,8 +60,6 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
 
-    console.log('🔑 Token received:', token ? 'Yes' : 'No');
-
     if (!token) {
       return NextResponse.json({ 
         success: false, 
@@ -69,22 +67,11 @@ export async function POST(req: NextRequest) {
       }, { status: 401 });
     }
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      console.log('👤 Decoded user ID:', decoded.userId);
-    } catch (jwtError: any) {
-      console.error('❌ JWT Error:', jwtError.message);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid token' 
-      }, { status: 401 });
-    }
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     const body = await req.json();
     const { videoId, videoTitle, videoDuration, videoThumbnail } = body;
 
-    console.log('📦 Download request:', { videoId, videoTitle, videoDuration });
+    console.log('📦 Download request:', { videoId, videoTitle });
 
     if (!videoTitle) {
       return NextResponse.json({ 
@@ -97,24 +84,15 @@ export async function POST(req: NextRequest) {
 
     const user = await User.findById(decoded.userId);
     if (!user) {
-      console.error('❌ User not found:', decoded.userId);
       return NextResponse.json({ 
         success: false, 
         error: 'User not found' 
       }, { status: 404 });
     }
 
-    console.log(`👤 User found: ${user.username}`);
-    console.log(`📋 Current plan: ${user.plan}`);
-    console.log(`📥 Existing downloads: ${user.downloadedVideos?.length || 0}`);
-
     // Check daily limit
     const today = new Date().toDateString();
-    console.log(`📅 Today: ${today}`);
-    console.log(`📅 Last download date: ${user.lastDownloadDate}`);
-
     if (user.lastDownloadDate !== today) {
-      console.log('🔄 Resetting daily download count');
       user.downloadsToday = 0;
       user.lastDownloadDate = today;
     }
@@ -127,11 +105,8 @@ export async function POST(req: NextRequest) {
     };
 
     const limit = planLimits[user.plan] || 1;
-    console.log(`📊 Daily limit: ${limit === Infinity ? 'Unlimited' : limit}`);
-    console.log(`📊 Downloads today: ${user.downloadsToday}`);
 
     if (user.downloadsToday >= limit) {
-      console.log(`❌ Daily limit reached`);
       return NextResponse.json({ 
         success: false, 
         error: `Daily limit reached (${limit}/day)` 
@@ -148,30 +123,17 @@ export async function POST(req: NextRequest) {
       downloadedAt: new Date().toISOString(),
     };
 
-    console.log('📝 Creating download record:', downloadRecord);
-
-    // Initialize array if it doesn't exist
+    // Initialize and save
     if (!user.downloadedVideos) {
       user.downloadedVideos = [];
-      console.log('📁 Initialized downloadedVideos array');
     }
-
-    // Add to front of array
     user.downloadedVideos.unshift(downloadRecord);
     user.downloadsToday += 1;
 
-    console.log(`💾 Saving user...`);
-    console.log(`📊 Downloads array length before save: ${user.downloadedVideos.length}`);
-
-    // Save user
     await user.save();
 
-    // Verify it was saved
-    const savedUser = await User.findById(decoded.userId);
-    console.log(`✅ Verified - Downloads in DB after save: ${savedUser?.downloadedVideos?.length || 0}`);
-    console.log(`📥 First download:`, savedUser?.downloadedVideos?.[0]);
-
-    console.log(`✅ Download saved successfully: ${videoTitle}`);
+    console.log(`✅ Download saved: ${videoTitle}`);
+    console.log(`📊 Total downloads: ${user.downloadedVideos.length}`);
 
     return NextResponse.json({
       success: true,
