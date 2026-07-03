@@ -39,38 +39,58 @@ export default function ProfilePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Download | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const router = useRouter();
 
-  // Video URL mapping for playback
+  // ✅ WORKING VIDEO URLS - Reliable sources
   const getVideoUrl = (videoTitle: string): string => {
-    // Map video titles to actual video URLs
+    // Map video titles to ACTUAL working video URLs
     const videoMap: Record<string, string> = {
-      '🐰 Big Buck Bunny': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      '🐘 Elephants Dream': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      '🗡️ Sintel': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-      '🤖 Tears of Steel': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-      '🔥 For Bigger Blazes': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      '🏃 For Bigger Escapes': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-      '🎢 For Bigger Funrides': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFunrides.mp4',
-      '🚗 For Bigger Joyrides': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-      '😤 For Bigger Meltdowns': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-      '🚙 Subaru Outback': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
-      '🚘 What Car?': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCar.mp4',
-      '🌿 Images of Nature': 'https://storage.googleapis.com/gtv-videos-bucket/sample/ImagesOfNature.mp4',
-      '🏙️ Driving in City': 'https://storage.googleapis.com/gtv-videos-bucket/sample/DrivingInCity.mp4',
-      '👥 People Waiting': 'https://storage.googleapis.com/gtv-videos-bucket/sample/PeopleWaiting.mp4',
+      // Google's sample videos (most reliable)
+      'Big Buck Bunny': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      'Elephants Dream': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      'Sintel': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+      'Tears of Steel': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+      'For Bigger Blazes': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      'For Bigger Escapes': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+      'For Bigger Funrides': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFunrides.mp4',
+      'For Bigger Joyrides': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+      'For Bigger Meltdowns': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+      'Subaru Outback': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
+      'What Car': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCar.mp4',
+      'Images of Nature': 'https://storage.googleapis.com/gtv-videos-bucket/sample/ImagesOfNature.mp4',
+      'Driving in City': 'https://storage.googleapis.com/gtv-videos-bucket/sample/DrivingInCity.mp4',
+      'People Waiting': 'https://storage.googleapis.com/gtv-videos-bucket/sample/PeopleWaiting.mp4',
+      'Previews': 'https://storage.googleapis.com/gtv-videos-bucket/sample/Previews.mp4',
+      'Video Demo': 'https://storage.googleapis.com/gtv-videos-bucket/sample/VideoPlayerOutOfSync.mp4',
     };
 
-    // Try to find exact match or partial match
+    // Check for emoji or special characters in title
+    const cleanTitle = videoTitle.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+    
+    // Try exact match first
+    if (videoMap[cleanTitle]) {
+      return videoMap[cleanTitle];
+    }
+    
+    // Try partial match
     for (const [key, value] of Object.entries(videoMap)) {
-      if (videoTitle.includes(key) || key.includes(videoTitle)) {
+      if (cleanTitle.includes(key) || key.includes(cleanTitle)) {
         return value;
       }
     }
     
-    // Default fallback video
-    return 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+    // Try without emojis
+    for (const [key, value] of Object.entries(videoMap)) {
+      if (videoTitle.includes(key)) {
+        return value;
+      }
+    }
+    
+    // Default fallback - W3Schools video (always works)
+    console.log('🎬 Using fallback video for:', videoTitle);
+    return 'https://www.w3schools.com/html/mov_bbb.mp4';
   };
 
   useEffect(() => {
@@ -149,24 +169,46 @@ export default function ProfilePage() {
   };
 
   const handlePlayVideo = (download: Download) => {
+    console.log('🎬 Playing video:', download.videoTitle);
+    setVideoError(false);
     setSelectedVideo(download);
     setIsModalOpen(true);
-    // Play video when modal opens
+    
+    // Force play after modal opens
     setTimeout(() => {
       if (videoRef.current) {
-        videoRef.current.play().catch(() => {
-          // Autoplay might be blocked, user can click play manually
+        const videoUrl = getVideoUrl(download.videoTitle);
+        videoRef.current.src = videoUrl;
+        videoRef.current.load();
+        videoRef.current.play().catch((err) => {
+          console.error('Autoplay error:', err);
+          // User will click play manually
         });
       }
-    }, 500);
+    }, 300);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     if (videoRef.current) {
       videoRef.current.pause();
+      videoRef.current.src = '';
+      videoRef.current.load();
     }
     setSelectedVideo(null);
+    setVideoError(false);
+  };
+
+  const handleVideoError = () => {
+    console.error('🎬 Video failed to load');
+    setVideoError(true);
+    // Try fallback video
+    if (videoRef.current && selectedVideo) {
+      const fallbackUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
+      videoRef.current.src = fallbackUrl;
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
+    }
   };
 
   const handleLogout = () => {
@@ -204,7 +246,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      <Navbar />
+      <Navbar  />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
@@ -294,20 +336,20 @@ export default function ProfilePage() {
         </div>
       </main>
 
-      {/* ✅ Video Player Modal - Plays the actual video */}
+      {/* ✅ Video Player Modal - FIXED */}
       {isModalOpen && selectedVideo && (
         <div 
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
           onClick={closeModal}
         >
           <div 
-            className="relative max-w-4xl w-full bg-black rounded-xl overflow-hidden"
+            className="relative max-w-4xl w-full bg-black rounded-xl overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 z-10 bg-red-600 hover:bg-red-700 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl"
+              className="absolute top-4 right-4 z-10 bg-red-600 hover:bg-red-700 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl transition"
             >
               ✕
             </button>
@@ -319,19 +361,34 @@ export default function ProfilePage() {
             </div>
 
             {/* Video Player */}
-            <video
-              ref={videoRef}
-              controls
-              autoPlay
-              className="w-full h-auto max-h-[70vh]"
-              controlsList="nodownload"
-            >
-              <source src={getVideoUrl(selectedVideo.videoTitle)} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
+            <div className="relative">
+              <video
+                ref={videoRef}
+                controls
+                autoPlay
+                className="w-full h-auto max-h-[70vh] bg-black"
+                onError={handleVideoError}
+                controlsList="nodownload"
+                playsInline
+              >
+                <source src={getVideoUrl(selectedVideo.videoTitle)} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+              
+              {/* Loading/Error overlay */}
+              {videoError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                  <div className="text-white text-center">
+                    <div className="text-6xl mb-4">🎬</div>
+                    <p className="text-lg font-semibold">Video unavailable</p>
+                    <p className="text-sm text-gray-400 mt-2">Trying fallback video...</p>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Footer */}
-            <div className="p-4 bg-slate-900 text-center text-gray-400 text-sm">
+            <div className="p-3 bg-slate-900 text-center text-gray-400 text-xs">
               💡 Downloaded on: {formatDate(selectedVideo.downloadedAt)}
             </div>
           </div>
