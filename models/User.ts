@@ -13,6 +13,18 @@ const UserSchema = new mongoose.Schema({
   watchDate: { type: String, default: () => new Date().toDateString() },
   downloadsToday: { type: Number, default: 0 },
   downloadDate: { type: String, default: () => new Date().toDateString() },
+  // ✅ IMPORTANT: This field stores all downloaded videos
+  downloadedVideos: { 
+    type: [{
+      id: { type: Number, required: true },
+      videoId: { type: String, default: 'unknown' },
+      videoTitle: { type: String, required: true },
+      videoDuration: { type: String, default: '00:00' },
+      videoThumbnail: { type: String, default: '🎬' },
+      downloadedAt: { type: String, default: () => new Date().toISOString() }
+    }],
+    default: []
+  },
   lastPaymentId: { type: String },
   planOrderId: { type: String },
   upgradedAt: { type: Date },
@@ -20,8 +32,9 @@ const UserSchema = new mongoose.Schema({
 });
 
 UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return;
+  if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 10);
+  next();
 });
 
 UserSchema.methods.comparePassword = async function(password: string) {

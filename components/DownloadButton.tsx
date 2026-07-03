@@ -20,7 +20,6 @@ export default function DownloadButton({
   const [message, setMessage] = useState('');
   const [userPlan, setUserPlan] = useState<string>('free');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [downloadCount, setDownloadCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -29,7 +28,6 @@ export default function DownloadButton({
       setIsLoggedIn(true);
       const user = JSON.parse(savedUser);
       setUserPlan(user.plan || 'free');
-      setDownloadCount(user.downloadsToday || 0);
     }
   }, []);
 
@@ -74,25 +72,31 @@ export default function DownloadButton({
         setMessage(`✅ ${videoTitle} downloaded!`);
         toast.success(`${videoTitle} downloaded!`);
 
-        // Update localStorage
+        // ✅ Update localStorage with fresh data
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
           const user = JSON.parse(savedUser);
-          user.downloadedVideos = data.downloads || [];
+          // ✅ Add new download to front of array
+          const newDownload = {
+            id: Date.now(),
+            videoId,
+            videoTitle,
+            videoDuration,
+            videoThumbnail,
+            downloadedAt: new Date().toISOString(),
+          };
+          const updatedDownloads = [newDownload, ...(user.downloadedVideos || [])];
+          user.downloadedVideos = updatedDownloads;
           user.downloadsToday = data.downloadsToday || 0;
           localStorage.setItem('user', JSON.stringify(user));
-          setDownloadCount(data.downloadsToday || 0);
         }
 
-        // ✅ CORRECT: Create a proper video file (simulated)
+        // ✅ Simulate file download
         const videoContent = `
           Video: ${videoTitle}
           Duration: ${videoDuration}
           Downloaded from VideoStream Pro
           Date: ${new Date().toLocaleString()}
-          ----------------------------------------
-          This is a demo video file. In production, 
-          this would be the actual video content.
         `;
         
         const blob = new Blob([videoContent], { type: 'video/mp4' });
@@ -125,41 +129,20 @@ export default function DownloadButton({
     }
   };
 
-  const getButtonText = () => {
-    if (downloadStatus === 'downloading') return '⏳ Downloading...';
-    if (downloadStatus === 'success') return '✅ Downloaded!';
-    return '📥 Download';
-  };
-
-  const getButtonClass = () => {
-    if (downloadStatus === 'downloading') return 'bg-yellow-600 cursor-wait';
-    if (downloadStatus === 'success') return 'bg-green-600';
-    if (userPlan !== 'free') return 'bg-purple-600 hover:bg-purple-700';
-    return 'bg-blue-600 hover:bg-blue-700';
-  };
-
-  const getLimitText = () => {
-    if (userPlan !== 'free') return '✨ Unlimited downloads';
-    return `🆓 ${downloadCount}/1 downloads today`;
-  };
-
   return (
     <div className="mt-3">
       <button
         onClick={handleDownload}
         disabled={downloadStatus === 'downloading'}
-        className={`w-full ${getButtonClass()} text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-50`}
+        className={`w-full ${downloadStatus === 'downloading' ? 'bg-yellow-600 cursor-wait' : downloadStatus === 'success' ? 'bg-green-600' : userPlan !== 'free' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-50`}
       >
-        {getButtonText()}
+        {downloadStatus === 'downloading' ? '⏳ Downloading...' : downloadStatus === 'success' ? '✅ Downloaded!' : '📥 Download'}
       </button>
       {message && (
         <p className={`text-xs mt-1 text-center ${downloadStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>
           {message}
         </p>
       )}
-      <p className="text-xs text-gray-400 text-center mt-1">
-        {getLimitText()}
-      </p>
     </div>
   );
 }

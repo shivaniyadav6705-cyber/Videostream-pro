@@ -4,11 +4,11 @@ import User from '@/models/User';
 import jwt from 'jsonwebtoken';
 
 // ============================================
-// GET - Fetch all downloads
+// GET - Fetch all downloads for the user
 // ============================================
 export async function GET(req: NextRequest) {
   try {
-    console.log('📥 GET Downloads API STARTED');
+    console.log('📥 GET Downloads API called');
 
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
@@ -16,11 +16,21 @@ export async function GET(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ 
         success: false, 
-        error: 'No token provided' 
+        error: 'No token provided. Please login first.' 
       }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    // Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    } catch (jwtError: any) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid token. Please login again.' 
+      }, { status: 401 });
+    }
+
     await connectDB();
 
     const user = await User.findById(decoded.userId);
@@ -31,13 +41,18 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
+    // ✅ Get downloads array (ensure it's an array)
+    const downloads = user.downloadedVideos || [];
+    const downloadsToday = user.downloadsToday || 0;
+
     console.log(`👤 User: ${user.username}`);
-    console.log(`📥 Downloads in DB: ${user.downloadedVideos?.length || 0}`);
+    console.log(`📥 Total downloads: ${downloads.length}`);
+    console.log(`📥 Today's downloads: ${downloadsToday}`);
 
     return NextResponse.json({
       success: true,
-      downloads: user.downloadedVideos || [],
-      downloadsToday: user.downloadsToday || 0,
+      downloads: downloads,
+      downloadsToday: downloadsToday,
       plan: user.plan || 'free',
     });
 
@@ -55,7 +70,7 @@ export async function GET(req: NextRequest) {
 // ============================================
 export async function POST(req: NextRequest) {
   try {
-    console.log('📥 POST Download API STARTED');
+    console.log('📥 POST Download API called');
 
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
@@ -63,15 +78,23 @@ export async function POST(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ 
         success: false, 
-        error: 'No token provided' 
+        error: 'No token provided. Please login first.' 
       }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    // Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    } catch (jwtError: any) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid token. Please login again.' 
+      }, { status: 401 });
+    }
+
     const body = await req.json();
     const { videoId, videoTitle, videoDuration, videoThumbnail } = body;
-
-    console.log('📦 Download request:', { videoId, videoTitle });
 
     if (!videoTitle) {
       return NextResponse.json({ 
@@ -90,11 +113,14 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check daily limit
+    console.log(`👤 User: ${user.username}`);
+    console.log(`📋 Plan: ${user.plan}`);
+
+    // ✅ Check daily download limit
     const today = new Date().toDateString();
-    if (user.lastDownloadDate !== today) {
+    if (user.downloadDate !== today) {
       user.downloadsToday = 0;
-      user.lastDownloadDate = today;
+      user.downloadDate = today;
     }
 
     const planLimits: Record<string, number> = {
@@ -109,11 +135,11 @@ export async function POST(req: NextRequest) {
     if (user.downloadsToday >= limit) {
       return NextResponse.json({ 
         success: false, 
-        error: `Daily limit reached (${limit}/day)` 
+        error: `Daily download limit reached (${limit}/day). ${user.plan === 'free' ? 'Upgrade to premium for unlimited downloads!' : ''}` 
       }, { status: 403 });
     }
 
-    // Create download record
+    // ✅ Create download record
     const downloadRecord = {
       id: Date.now(),
       videoId: videoId || 'unknown',
@@ -123,17 +149,21 @@ export async function POST(req: NextRequest) {
       downloadedAt: new Date().toISOString(),
     };
 
-    // Initialize and save
+    // ✅ Initialize array if it doesn't exist
     if (!user.downloadedVideos) {
       user.downloadedVideos = [];
     }
+
+    // ✅ Add to beginning of array (newest first)
     user.downloadedVideos.unshift(downloadRecord);
     user.downloadsToday += 1;
 
+    // ✅ Save user
     await user.save();
 
     console.log(`✅ Download saved: ${videoTitle}`);
     console.log(`📊 Total downloads: ${user.downloadedVideos.length}`);
+    console.log(`📊 Today's downloads: ${user.downloadsToday}`);
 
     return NextResponse.json({
       success: true,

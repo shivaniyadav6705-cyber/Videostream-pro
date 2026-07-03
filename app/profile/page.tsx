@@ -19,7 +19,6 @@ interface User {
   id: string;
   username: string;
   email: string;
-  phone?: string;
   plan: string;
   planStartDate?: string;
   planEndDate?: string;
@@ -28,16 +27,9 @@ interface User {
   downloadedVideos?: Download[];
 }
 
-interface PlanDetails {
-  startDate: string;
-  endDate: string;
-  daysLeft: number;
-}
-
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [planDetails, setPlanDetails] = useState<PlanDetails | null>(null);
   const [downloads, setDownloads] = useState<Download[]>([]);
   const [stats, setStats] = useState({
     downloadsToday: 0,
@@ -62,7 +54,7 @@ export default function ProfilePage() {
     try {
       const userData = JSON.parse(savedUser);
       setUser(userData);
-      fetchUserDetails(token);
+      // ✅ Load downloads immediately
       fetchDownloads(token);
     } catch (e) {
       console.error('Error parsing user:', e);
@@ -71,34 +63,6 @@ export default function ProfilePage() {
     
     setLoading(false);
   }, []);
-
-  const fetchUserDetails = async (token: string) => {
-    try {
-      const res = await fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (data.user) {
-        setUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        if (data.user.planStartDate && data.user.planEndDate) {
-          const start = new Date(data.user.planStartDate);
-          const end = new Date(data.user.planEndDate);
-          const now = new Date();
-          const daysLeft = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          
-          setPlanDetails({
-            startDate: start.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-            endDate: end.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-            daysLeft: Math.max(0, daysLeft)
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch user:', error);
-    }
-  };
 
   const fetchDownloads = async (token: string) => {
     try {
@@ -117,6 +81,7 @@ export default function ProfilePage() {
       console.log('📥 Downloads API response:', data);
       
       if (data.success) {
+        // ✅ Set downloads from API
         const downloadsList = data.downloads || [];
         setDownloads(downloadsList);
         setStats({
@@ -125,15 +90,18 @@ export default function ProfilePage() {
           plan: data.plan || 'free',
         });
         
-        // Update localStorage with fresh data
-        if (user) {
-          const updatedUser = { ...user, downloadedVideos: downloadsList };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
+        // ✅ Update localStorage with fresh data
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          const userData = JSON.parse(savedUser);
+          userData.downloadedVideos = downloadsList;
+          userData.downloadsToday = data.downloadsToday || 0;
+          localStorage.setItem('user', JSON.stringify(userData));
         }
         
         console.log(`✅ Loaded ${downloadsList.length} downloads`);
       } else {
-        console.error('❌ Error:', data.error);
+        console.error('❌ API error:', data.error);
         toast.error(data.error || 'Failed to load downloads');
       }
     } catch (error) {
@@ -191,7 +159,7 @@ export default function ProfilePage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
-          {/* Header */}
+          {/* Profile Header */}
           <div className="flex items-center gap-6 flex-wrap mb-6">
             <div className="text-6xl">👤</div>
             <div>
@@ -206,7 +174,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Stats Cards */}
+          {/* Stats Cards - ✅ Shows EXACT counts */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-slate-700/50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-white">{stats.totalDownloads}</p>
@@ -217,59 +185,23 @@ export default function ProfilePage() {
               <p className="text-xs text-gray-400">Today's Downloads</p>
             </div>
             <div className="bg-slate-700/50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-white uppercase">{user.plan}</p>
+              <p className="text-2xl font-bold text-white uppercase">{stats.plan}</p>
               <p className="text-xs text-gray-400">Current Plan</p>
             </div>
           </div>
 
-          {/* Plan Details */}
-          <div className="bg-slate-700/50 rounded-xl p-6 mb-6 border border-slate-600">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white">📋 Plan Details</h2>
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white transition disabled:opacity-50"
-              >
-                {refreshing ? '🔄 Refreshing...' : '🔄 Refresh'}
-              </button>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
-                <p className="text-xs text-gray-400">Current Plan</p>
-                <p className="text-xl font-bold text-white uppercase">{user.plan}</p>
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
-                <p className="text-xs text-gray-400">Start Date</p>
-                <p className="text-sm text-white">{planDetails?.startDate || 'N/A'}</p>
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
-                <p className="text-xs text-gray-400">Valid Until</p>
-                <p className="text-sm text-white">{planDetails?.endDate || 'N/A'}</p>
-                {planDetails && planDetails.daysLeft > 0 && user.plan !== 'free' && (
-                  <p className="text-xs text-green-400 mt-1">{planDetails.daysLeft} days remaining</p>
-                )}
-                {planDetails && planDetails.daysLeft <= 0 && user.plan !== 'free' && (
-                  <p className="text-xs text-red-400 mt-1">⚠️ Expired - Please renew</p>
-                )}
-                {user.plan === 'free' && (
-                  <p className="text-xs text-yellow-400 mt-1">Upgrade to unlock premium</p>
-                )}
-              </div>
-            </div>
+          {/* Refresh Button */}
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white transition disabled:opacity-50"
+            >
+              {refreshing ? '🔄 Loading...' : '🔄 Refresh'}
+            </button>
           </div>
 
-          {/* Upgrade Button */}
-          {user.plan === 'free' && (
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-4 text-center mb-6">
-              <p className="text-white font-semibold">🚀 Upgrade to Premium for unlimited features!</p>
-              <Link href="/upgrade" className="inline-block mt-2 bg-white text-purple-600 px-6 py-2 rounded-lg font-bold hover:bg-gray-100 transition">
-                View Plans
-              </Link>
-            </div>
-          )}
-
-          {/* Downloads Section */}
+          {/* Downloads Section - ✅ Shows ALL downloaded videos */}
           <div className="mt-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-white">📥 My Downloads</h2>
