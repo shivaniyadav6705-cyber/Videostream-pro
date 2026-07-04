@@ -266,7 +266,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-slate-700/50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-white">{stats.totalDownloads}</p>
               <p className="text-xs text-gray-400">Total Downloads</p>
