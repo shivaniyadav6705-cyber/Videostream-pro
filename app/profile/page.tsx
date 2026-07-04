@@ -272,10 +272,6 @@ export default function ProfilePage() {
               <p className="text-xs text-gray-400">Total Downloads</p>
             </div>
             <div className="bg-slate-700/50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-white">{stats.downloadsToday}</p>
-              <p className="text-xs text-gray-400">Today's Downloads</p>
-            </div>
-            <div className="bg-slate-700/50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-white uppercase">{stats.plan}</p>
               <p className="text-xs text-gray-400">Current Plan</p>
             </div>
