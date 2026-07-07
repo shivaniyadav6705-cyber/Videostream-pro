@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { sendInvoiceEmail } from '@/lib/email';
 
 export async function GET() {
-  const testEmail = process.env.FROM_EMAIL || 'shivaniyadav6705@gmail.com';
+  // ✅ CHANGE THIS TO YOUR ACTUAL EMAIL
+  const testEmail = 'shivaniyadav6705@gmail.com';  // ← CHANGE THIS
   
   console.log(`📧 Sending test invoice to: ${testEmail}`);
   

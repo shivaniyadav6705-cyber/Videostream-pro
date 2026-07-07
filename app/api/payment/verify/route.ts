@@ -8,15 +8,15 @@ import jwt from 'jsonwebtoken';
 const PLAN_DETAILS: Record<string, any> = {
   bronze: {
     name: 'Bronze Plan',
-    watchTime: '7 minutes/day',
+    watchTime: '7 minutes per day',
     price: 10,
-    features: ['7 min daily watch time', 'SD Quality (480p)', 'Basic Support', '1 Device at a time'],
+    features: ['7 minutes daily watch time', 'SD Quality (480p)', 'Basic Support', '1 Device at a time'],
   },
   silver: {
     name: 'Silver Plan',
-    watchTime: '10 minutes/day',
+    watchTime: '10 minutes per day',
     price: 50,
-    features: ['10 min daily watch time', 'HD Quality (720p)', 'Priority Support', '2 Devices', 'No Ads'],
+    features: ['10 minutes daily watch time', 'HD Quality (720p)', 'Priority Support', '2 Devices', 'No Ads'],
   },
   gold: {
     name: 'Gold Plan',
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     console.log(`✅ User upgraded to: ${planName}`);
 
     // ============================================
-    // SEND INVOICE EMAIL - THIS IS THE FIX
+    // SEND REAL INVOICE EMAIL TO USER'S EMAIL
     // ============================================
     const planInfo = PLAN_DETAILS[planType];
     let emailSent = false;
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       console.log(`📧 Attempting to send invoice to: ${user.email}`);
       
       try {
-        // IMPORTANT: Use the exact same function that worked in test
+        // ✅ THIS SENDS TO THE USER'S ACTUAL EMAIL
         emailSent = await sendInvoiceEmail(user.email, {
           username: user.username,
           planName: planInfo.name,
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         if (emailSent) {
           console.log(`✅ Invoice email sent to ${user.email}`);
         } else {
-          console.log(`❌ Invoice email returned false`);
+          console.log(`❌ Invoice email failed to send to ${user.email}`);
         }
       } catch (emailError: any) {
         console.error('❌ Email error:', emailError.message);
@@ -132,6 +132,7 @@ export async function POST(req: NextRequest) {
     console.log('='.repeat(50));
     console.log(`✅ Payment Verification Complete`);
     console.log(`📧 Invoice Email Sent: ${emailSent}`);
+    console.log(`📧 To: ${user.email}`);
     console.log('='.repeat(50) + '\n');
 
     return NextResponse.json({
