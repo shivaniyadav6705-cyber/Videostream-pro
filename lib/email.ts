@@ -143,7 +143,7 @@ export async function sendInvoiceEmail(
   }
 ): Promise<boolean> {
   try {
-    console.log(`📧 Sending invoice to: ${email}`);
+    console.log(`📧 Sending real invoice to: ${email}`);
     console.log(`📄 Plan: ${data.planName}, Amount: ₹${data.amount}`);
 
     if (!resendInstance) {
@@ -225,7 +225,7 @@ export async function sendInvoiceEmail(
       return false;
     }
 
-    console.log(`✅ Invoice sent to ${email}`);
+    console.log(`✅ Invoice sent to ${email} (ID: ${result.data?.id})`);
     return true;
   } catch (error: any) {
     console.error('❌ Invoice email failed:', error.message);
