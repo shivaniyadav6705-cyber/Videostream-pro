@@ -45,8 +45,19 @@ export async function POST(req: NextRequest) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     
-    // Get user from database or use decoded info
-    const username = decoded.username || 'User';
+    // Get username from decoded token or user data
+    let username = 'User';
+    try {
+      // Try to get user from database
+      const User = (await import('@/models/User')).default;
+      const user = await User.findById(decoded.userId);
+      if (user) {
+        username = user.username;
+      }
+    } catch {
+      // If user not found, use decoded username or default
+      username = decoded.username || 'User';
+    }
 
     // Check for special characters
     const specialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;

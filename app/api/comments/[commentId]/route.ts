@@ -3,11 +3,14 @@ import { connectDB } from '@/lib/db';
 import Comment from '@/models/Comment';
 import jwt from 'jsonwebtoken';
 
-// POST - Like a comment
-export async function POST(req: NextRequest, { params }: { params: { commentId: string } }) {
+// ✅ FIXED: params is now a Promise
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ commentId: string }> }
+) {
   try {
     await connectDB();
-    const { commentId } = params;
+    const { commentId } = await params; // ✅ Await the params
     
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
@@ -16,6 +19,8 @@ export async function POST(req: NextRequest, { params }: { params: { commentId: 
       return NextResponse.json({ error: 'Login required' }, { status: 401 });
     }
 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    
     const comment = await Comment.findById(commentId);
     if (!comment) {
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
@@ -34,11 +39,14 @@ export async function POST(req: NextRequest, { params }: { params: { commentId: 
   }
 }
 
-// DELETE - Dislike a comment (using DELETE method)
-export async function DELETE(req: NextRequest, { params }: { params: { commentId: string } }) {
+// ✅ FIXED: DELETE method
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ commentId: string }> }
+) {
   try {
     await connectDB();
-    const { commentId } = params;
+    const { commentId } = await params; // ✅ Await the params
     
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
@@ -55,8 +63,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { commentId
     comment.dislikes += 1;
     
     // Auto-remove if 2 or more dislikes
+    let removed = false;
     if (comment.dislikes >= 2) {
       comment.removed = true;
+      removed = true;
     }
     
     await comment.save();
@@ -64,7 +74,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { commentId
     return NextResponse.json({ 
       likes: comment.likes, 
       dislikes: comment.dislikes,
-      removed: comment.removed
+      removed: removed
     });
   } catch (error: any) {
     console.error('❌ Dislike error:', error);
@@ -72,12 +82,15 @@ export async function DELETE(req: NextRequest, { params }: { params: { commentId
   }
 }
 
-// PUT - Toggle like/dislike (alternative to separate endpoints)
-export async function PUT(req: NextRequest, { params }: { params: { commentId: string } }) {
+// ✅ FIXED: PUT method (optional - for toggling like/dislike)
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ commentId: string }> }
+) {
   try {
     await connectDB();
-    const { commentId } = params;
-    const { action } = await req.json(); // 'like' or 'dislike'
+    const { commentId } = await params; // ✅ Await the params
+    const { action } = await req.json();
     
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
