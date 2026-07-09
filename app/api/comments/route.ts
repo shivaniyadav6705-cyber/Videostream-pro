@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Comment from '@/models/Comment';
+import User from '@/models/User';
 import jwt from 'jsonwebtoken';
 
 // GET - Fetch comments for a video
@@ -45,18 +46,10 @@ export async function POST(req: NextRequest) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     
-    // Get username from decoded token or user data
-    let username = 'User';
-    try {
-      // Try to get user from database
-      const User = (await import('@/models/User')).default;
-      const user = await User.findById(decoded.userId);
-      if (user) {
-        username = user.username;
-      }
-    } catch {
-      // If user not found, use decoded username or default
-      username = decoded.username || 'User';
+    // ✅ Get user from database
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Check for special characters
@@ -67,10 +60,11 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // ✅ userId is now a string (user._id.toString())
     const comment = await Comment.create({
       videoId,
-      userId: decoded.userId,
-      username,
+      userId: user._id.toString(), // ✅ Convert ObjectId to string
+      username: user.username,
       text,
       city: city || 'Unknown',
       likes: 0,
