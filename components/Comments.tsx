@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
 interface Comment {
-  id: number;
+  _id: string;
   videoId: string;
   userId: number;
   username: string;
@@ -15,17 +15,11 @@ interface Comment {
   createdAt: string;
   removed: boolean;
   language: string;
-  displayText?: string;
 }
 
 interface CommentsProps {
   videoId: string;
 }
-
-// In-memory comments storage (shared across all users)
-// This ensures all users see the same comments
-let globalComments: Comment[] = [];
-let nextCommentId = 1;
 
 // Get user's city from IP (using free API)
 const getUserCity = async (): Promise<string> => {
@@ -58,7 +52,7 @@ export default function Comments({ videoId }: CommentsProps) {
   const [user, setUser] = useState<any>(null);
   const [userCity, setUserCity] = useState('Unknown');
   const [translateLang, setTranslateLang] = useState('en');
-  const [translations, setTranslations] = useState<Record<number, string>>({});
+  const [translations, setTranslations] = useState<Record<string, string>>({});
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const languages = [
@@ -85,15 +79,21 @@ export default function Comments({ videoId }: CommentsProps) {
     getUserCity().then(setUserCity);
     loadComments();
     
-    // Refresh comments every 5 seconds to show new ones
-    const interval = setInterval(loadComments, 5000);
+    // Refresh comments every 10 seconds to show new ones
+    const interval = setInterval(loadComments, 10000);
     return () => clearInterval(interval);
   }, [videoId]);
 
-  const loadComments = () => {
-    const videoComments = globalComments.filter(c => c.videoId === videoId && !c.removed);
-    videoComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    setComments(videoComments);
+  const loadComments = async () => {
+    try {
+      const res = await fetch(`/api/comments?videoId=${videoId}`);
+      const data = await res.json();
+      if (data.comments) {
+        setComments(data.comments);
+      }
+    } catch (error) {
+      console.error('Failed to load comments:', error);
+    }
   };
 
   const handlePostComment = async () => {
@@ -116,62 +116,98 @@ export default function Comments({ videoId }: CommentsProps) {
 
     setLoading(true);
 
-    const newCommentObj: Comment = {
-      id: nextCommentId++,
-      videoId,
-      userId: user.id,
-      username: user.username,
-      text: newComment,
-      city: userCity,
-      likes: 0,
-      dislikes: 0,
-      createdAt: new Date().toISOString(),
-      removed: false,
-      language: 'en'
-    };
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          videoId,
+          text: newComment,
+          city: userCity,
+        }),
+      });
 
-    // Add to global storage
-    globalComments.push(newCommentObj);
-    setNewComment('');
-    loadComments();
-    toast.success('Comment posted!');
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setNewComment('');
+        await loadComments();
+        toast.success('Comment posted!');
+      } else {
+        toast.error(data.error || 'Failed to post comment');
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      toast.error('Failed to post comment');
+    }
     setLoading(false);
   };
 
-  const handleLike = async (commentId: number) => {
+  const handleLike = async (commentId: string) => {
     if (!isLoggedIn) {
       toast.error('Please login to like comments');
       return;
     }
 
-    const commentIndex = globalComments.findIndex(c => c.id === commentId);
-    if (commentIndex !== -1) {
-      globalComments[commentIndex].likes += 1;
-      loadComments();
-      toast.success('Liked!');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/comments/${commentId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        await loadComments();
+        toast.success('Liked!');
+      } else {
+        toast.error(data.error || 'Failed to like');
+      }
+    } catch (error) {
+      console.error('Error liking comment:', error);
+      toast.error('Failed to like');
     }
   };
 
-  const handleDislike = async (commentId: number) => {
+  const handleDislike = async (commentId: string) => {
     if (!isLoggedIn) {
       toast.error('Please login to dislike comments');
       return;
     }
 
-    const commentIndex = globalComments.findIndex(c => c.id === commentId);
-    if (commentIndex !== -1) {
-      globalComments[commentIndex].dislikes += 1;
-      
-      // Auto-remove if 2 or more dislikes
-      if (globalComments[commentIndex].dislikes >= 2) {
-        globalComments[commentIndex].removed = true;
-        toast.error('Comment removed due to 2 dislikes');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        await loadComments();
+        if (data.removed) {
+          toast.error('Comment removed due to 2 dislikes');
+        } else {
+          toast.success('Disliked!');
+        }
+      } else {
+        toast.error(data.error || 'Failed to dislike');
       }
-      loadComments();
+    } catch (error) {
+      console.error('Error disliking comment:', error);
+      toast.error('Failed to dislike');
     }
   };
 
-  const handleTranslate = async (commentId: number, text: string) => {
+  const handleTranslate = async (commentId: string, text: string) => {
     if (translateLang === 'en') {
       // If English selected, remove translation
       const updated = { ...translations };
@@ -209,7 +245,7 @@ export default function Comments({ videoId }: CommentsProps) {
     return date.toLocaleDateString();
   };
 
-  const isTranslated = (commentId: number) => {
+  const isTranslated = (commentId: string) => {
     return translations[commentId] !== undefined;
   };
 
@@ -242,7 +278,7 @@ export default function Comments({ videoId }: CommentsProps) {
           placeholder={isLoggedIn ? "Write a comment... (No special characters allowed)" : "Please login to comment"}
           disabled={!isLoggedIn}
           className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-          onKeyPress={(e) => e.key === 'Enter' && handlePostComment()}
+          onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
         />
         <button
           onClick={handlePostComment}
@@ -268,7 +304,7 @@ export default function Comments({ videoId }: CommentsProps) {
           </div>
         ) : (
           comments.map((comment) => (
-            <div key={comment.id} className="bg-slate-700/50 rounded-lg p-4">
+            <div key={comment._id} className="bg-slate-700/50 rounded-lg p-4">
               {/* Comment Header */}
               <div className="flex justify-between items-start flex-wrap gap-2 mb-2">
                 <div className="flex items-center gap-2">
@@ -287,13 +323,13 @@ export default function Comments({ videoId }: CommentsProps) {
               {/* Comment Text with Translation */}
               <div className="mb-3">
                 <p className="text-gray-200">
-                  {isTranslated(comment.id) ? translations[comment.id] : comment.text}
+                  {isTranslated(comment._id) ? translations[comment._id] : comment.text}
                 </p>
-                {isTranslated(comment.id) && (
+                {isTranslated(comment._id) && (
                   <button
                     onClick={() => {
                       const updated = { ...translations };
-                      delete updated[comment.id];
+                      delete updated[comment._id];
                       setTranslations(updated);
                     }}
                     className="text-xs text-blue-400 hover:text-blue-300 mt-1"
@@ -306,26 +342,26 @@ export default function Comments({ videoId }: CommentsProps) {
               {/* Action Buttons */}
               <div className="flex items-center gap-4 flex-wrap">
                 <button
-                  onClick={() => handleLike(comment.id)}
+                  onClick={() => handleLike(comment._id)}
                   disabled={!isLoggedIn}
                   className="flex items-center gap-1 text-sm text-gray-300 hover:text-green-400 transition disabled:opacity-50"
                 >
                   👍 {comment.likes}
                 </button>
                 <button
-                  onClick={() => handleDislike(comment.id)}
+                  onClick={() => handleDislike(comment._id)}
                   disabled={!isLoggedIn}
                   className="flex items-center gap-1 text-sm text-gray-300 hover:text-red-400 transition disabled:opacity-50"
                 >
                   👎 {comment.dislikes}
                 </button>
                 <button
-                  onClick={() => handleTranslate(comment.id, comment.text)}
+                  onClick={() => handleTranslate(comment._id, comment.text)}
                   className={`flex items-center gap-1 text-sm transition ${
-                    isTranslated(comment.id) ? 'text-blue-400' : 'text-gray-300 hover:text-blue-400'
+                    isTranslated(comment._id) ? 'text-blue-400' : 'text-gray-300 hover:text-blue-400'
                   }`}
                 >
-                  🌐 {isTranslated(comment.id) ? 'Hide Translation' : 'Translate'}
+                  🌐 {isTranslated(comment._id) ? 'Hide Translation' : 'Translate'}
                 </button>
               </div>
             </div>
