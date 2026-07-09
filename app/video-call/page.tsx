@@ -65,7 +65,7 @@ export default function VideoCallPage() {
             </div>
           </div>
           
-          <VideoCall userId={user.id} username={user.username} />
+          <VideoCall />
         </div>
       </main>
     </div>

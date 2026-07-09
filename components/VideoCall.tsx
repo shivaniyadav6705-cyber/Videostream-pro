@@ -3,15 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
-declare global {
-  interface Window {
-    gapi: any;
-  }
-}
-
-interface VideoCallProps {
-  userId?: string;
-  username?: string;
+interface User {
+  _id: string;
+  username: string;
+  email: string;
+  plan: string;
+  avatar?: string;
 }
 
 interface CallHistory {
@@ -21,11 +18,13 @@ interface CallHistory {
   endTime?: string;
   duration?: number;
   participant: string;
+  participantId: string;
   status: 'ongoing' | 'completed' | 'missed';
   isIncoming?: boolean;
 }
 
-export default function VideoCall({ userId, username }: VideoCallProps) {
+export default function VideoCall() {
+  const [user, setUser] = useState<any>(null);
   const [isCallActive, setIsCallActive] = useState(false);
   const [meetingId, setMeetingId] = useState('');
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -37,29 +36,92 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
   const [callHistory, setCallHistory] = useState<CallHistory[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [callType, setCallType] = useState<'audio' | 'video'>('video');
-  const [friendEmail, setFriendEmail] = useState('');
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  
+  // New states for user search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [callWithUser, setCallWithUser] = useState<User | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load call history from localStorage
+  // Load user and call history
   useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    
     const savedHistory = localStorage.getItem('callHistory');
     if (savedHistory) {
       setCallHistory(JSON.parse(savedHistory));
     }
   }, []);
 
-  // Generate a unique meeting ID
+  // Generate meeting ID
   const generateMeetingId = () => {
     return Math.random().toString(36).substring(2, 10) + 
            Math.random().toString(36).substring(2, 6);
   };
 
-  // Start a new call (video or audio)
-  const startCall = (type: 'audio' | 'video' = 'video') => {
+  // Search users
+  const searchUsers = async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.users) {
+        setSearchResults(data.users);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle search input with debounce
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      searchUsers(query);
+    }, 500);
+  };
+
+  // Call a user
+  const callUser = (user: User) => {
+    setSelectedUser(user);
+    setCallWithUser(user);
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    
+    // Start the call
+    startCall('video', user);
+  };
+
+  // Start call with specific user
+  const startCall = (type: 'audio' | 'video', targetUser?: User) => {
     const newMeetingId = generateMeetingId();
     setMeetingId(newMeetingId);
     setCallType(type);
@@ -81,21 +143,28 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
     }, 1000);
     
     // Save to call history
+    const participantName = targetUser ? targetUser.username : 'Unknown User';
+    const participantId = targetUser ? targetUser._id : 'unknown';
+    
     const callRecord: CallHistory = {
       id: Date.now(),
       meetingId: newMeetingId,
       startTime: new Date().toISOString(),
-      participant: username || 'You',
+      participant: participantName,
+      participantId: participantId,
       status: 'ongoing'
     };
     const updatedHistory = [callRecord, ...callHistory];
     setCallHistory(updatedHistory);
     localStorage.setItem('callHistory', JSON.stringify(updatedHistory));
     
-    toast.success(`✅ ${type === 'audio' ? 'Audio' : 'Video'} call started! Share the link with friends.`);
+    const message = targetUser 
+      ? `📞 Calling ${targetUser.username}...` 
+      : `✅ ${type === 'audio' ? 'Audio' : 'Video'} call started!`;
+    toast.success(message);
   };
 
-  // Join an existing meeting
+  // Join existing meeting
   const joinCall = () => {
     if (!meetingId) {
       toast.error('Please enter a Meeting ID');
@@ -106,10 +175,8 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
     setMeetingLink(link);
     setIsCallActive(true);
     
-    // Open Google Meet in new window
     window.open(link, '_blank');
     
-    // Start duration timer
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current);
     }
@@ -121,44 +188,18 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
     toast.success('✅ Joining meeting...');
   };
 
-  // Invite a friend via email
-  const inviteFriend = () => {
-    if (!friendEmail) {
-      toast.error('Please enter friend\'s email');
-      return;
-    }
-    
-    if (!meetingLink) {
-      toast.error('Please start a call first');
-      return;
-    }
-    
-    // Generate a shareable link with email
-    const inviteLink = `${meetingLink}?invite=${encodeURIComponent(friendEmail)}`;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(inviteLink);
-    
-    toast.success(`📧 Invitation sent to ${friendEmail}! Share the link.`);
-    setFriendEmail('');
-    setShowInviteModal(false);
-  };
-
   // Screen Sharing
   const startScreenShare = async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ 
-        video: {
-          cursor: 'always'
-        } as MediaTrackConstraints,
+        video: { cursor: 'always' } as MediaTrackConstraints,
         audio: true 
       });
       
       setIsScreenSharing(true);
-      
       const screenTrack = stream.getVideoTracks()[0];
       
-      toast.success('🖥️ Screen sharing started! Select a window to share.');
+      toast.success('🖥️ Screen sharing started!');
       
       screenTrack.onended = () => {
         setIsScreenSharing(false);
@@ -167,7 +208,7 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
       
     } catch (err) {
       console.error('Screen share error:', err);
-      toast.error('Screen sharing cancelled or not allowed');
+      toast.error('Screen sharing cancelled');
       setIsScreenSharing(false);
     }
   };
@@ -176,9 +217,7 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ 
-        video: {
-          cursor: 'always'
-        } as MediaTrackConstraints,
+        video: { cursor: 'always' } as MediaTrackConstraints,
         audio: true 
       });
       
@@ -195,10 +234,7 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
       };
       
       mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { 
-          type: 'video/webm' 
-        });
-        
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -207,7 +243,6 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        
         URL.revokeObjectURL(url);
         
         toast.success('✅ Recording saved to your device!');
@@ -216,12 +251,11 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
       
       mediaRecorderRef.current.start(1000);
       setIsRecording(true);
-      
-      toast.success('⏺️ Recording started... Stop recording to save');
+      toast.success('⏺️ Recording started...');
       
     } catch (err) {
       console.error('Recording error:', err);
-      toast.error('Recording failed. Please allow screen capture.');
+      toast.error('Recording failed');
     }
   };
 
@@ -275,7 +309,8 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
     setMeetingId('');
     setMeetingLink('');
     setCallDuration(0);
-    setShowInviteModal(false);
+    setCallWithUser(null);
+    setSelectedUser(null);
     
     toast.success('Call ended');
   };
@@ -297,11 +332,11 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
   const copyLink = () => {
     if (meetingLink) {
       navigator.clipboard.writeText(meetingLink);
-      toast.success('📋 Link copied to clipboard! Share with friends.');
+      toast.success('📋 Link copied to clipboard!');
     }
   };
 
-  // If call is active, show meeting UI
+  // If call is active
   if (isCallActive) {
     return (
       <div className="space-y-4">
@@ -311,6 +346,11 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
             <div>
               <h2 className="text-xl font-semibold text-white">
                 {callType === 'audio' ? '🎙️ Audio Call' : '📹 Video Call'}
+                {callWithUser && (
+                  <span className="text-sm text-blue-400 ml-2">
+                    with {callWithUser.username}
+                  </span>
+                )}
               </h2>
               <p className="text-sm text-gray-400">
                 Meeting ID: <span className="font-mono text-blue-400">{meetingId}</span>
@@ -321,14 +361,6 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
             </div>
             
             <div className="flex flex-wrap gap-2">
-              {/* Invite Friend Button */}
-              <button
-                onClick={() => setShowInviteModal(true)}
-                className="px-3 py-2 rounded-lg transition bg-green-600 hover:bg-green-700"
-              >
-                👤 Invite Friend
-              </button>
-              
               <button
                 onClick={toggleMute}
                 className={`px-3 py-2 rounded-lg transition ${isMuted ? 'bg-red-600' : 'bg-gray-600'} hover:opacity-80`}
@@ -402,78 +434,110 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
             </span>
           </div>
         </div>
-
-        {/* Invite Friend Modal */}
-        {showInviteModal && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700">
-              <h3 className="text-xl font-semibold text-white mb-4">👤 Invite a Friend</h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Send the meeting link to your friend so they can join the call.
-              </p>
-              <input
-                type="email"
-                placeholder="Enter friend's email"
-                value={friendEmail}
-                onChange={(e) => setFriendEmail(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={inviteFriend}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white transition"
-                >
-                  📧 Send Invite
-                </button>
-                <button
-                  onClick={() => setShowInviteModal(false)}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-white transition"
-                >
-                  Cancel
-                </button>
-              </div>
-              <div className="mt-3 text-center text-xs text-gray-500">
-                Or copy the link and share it manually
-              </div>
-            </div>
-          </div>
-        )}
         
         {/* Feature Guide */}
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-sm text-center">
           <p className="text-blue-300">
             💡 <strong>YouTube Screen Sharing:</strong> Click "Share Screen" → Select the YouTube tab → Watch together!
           </p>
-          <p className="text-gray-400 text-xs mt-1">
-            🎙️ Click "Invite Friend" to send the meeting link directly to anyone.
-          </p>
         </div>
       </div>
     );
   }
 
-  // Main Call Interface - Before call starts
+  // Main Call Interface
   return (
     <div className="space-y-6">
       {/* Main Call Interface */}
       <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700">
         <div className="text-6xl mb-4">📹</div>
-        <h2 className="text-2xl font-bold text-white mb-2">Start a Video Call</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">Video Call</h2>
         <p className="text-gray-400 mb-6">Connect with friends using Google Meet</p>
         
+        {/* User Search Section */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowSearch(!showSearch)}
+            className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg text-white transition flex items-center gap-2 mx-auto"
+          >
+            {showSearch ? '🔍 Hide Search' : '🔍 Find a User'}
+          </button>
+          
+          {showSearch && (
+            <div className="mt-4 max-w-md mx-auto">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search by username or email..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {isSearching && (
+                  <span className="absolute right-3 top-3 text-gray-400">⏳</span>
+                )}
+              </div>
+              
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <div className="mt-2 bg-slate-700 rounded-lg overflow-hidden">
+                  {searchResults.map((result) => (
+                    <div
+                      key={result._id}
+                      className="flex items-center justify-between px-4 py-3 hover:bg-slate-600 transition cursor-pointer border-b border-slate-600 last:border-b-0"
+                      onClick={() => callUser(result)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                          {result.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="text-left">
+                          <p className="text-white font-medium">{result.username}</p>
+                          <p className="text-xs text-gray-400">{result.email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          callUser(result);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded text-white text-sm transition"
+                      >
+                        📞 Call
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {searchQuery.length >= 2 && searchResults.length === 0 && !isSearching && (
+                <p className="mt-2 text-gray-400 text-sm">No users found</p>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Divider */}
+        <div className="flex items-center gap-4 my-6">
+          <div className="flex-1 h-px bg-slate-600"></div>
+          <span className="text-gray-400 text-sm">OR</span>
+          <div className="flex-1 h-px bg-slate-600"></div>
+        </div>
+        
+        {/* Call Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={() => startCall('video')}
-            className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2 justify-center"
           >
-            🎥 Video Call
+            🎥 Start Video Call
           </button>
           
           <button
             onClick={() => startCall('audio')}
-            className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2"
+            className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2 justify-center"
           >
-            🎙️ Audio Call
+            🎙️ Start Audio Call
           </button>
           
           <div className="flex gap-2">
@@ -495,55 +559,57 @@ export default function VideoCall({ userId, username }: VideoCallProps) {
         </div>
         
         <div className="mt-6 text-sm text-gray-400">
-          <p>✨ Features: Video/Audio calls | Screen sharing (YouTube) | Call recording | Invite friends</p>
+          <p>✨ Features: Video/Audio calls | Screen sharing (YouTube) | Call recording | Find users</p>
           <p className="text-xs text-gray-500 mt-2">
-            💡 Create a meeting and invite friends via email or share the link.
+            💡 Search for a user and call them directly, or create a meeting and share the link.
           </p>
         </div>
       </div>
       
       {/* Call History */}
-      <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-sm font-semibold text-gray-300">📞 Call History</h3>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="text-xs text-blue-400 hover:text-blue-300"
-          >
-            {showHistory ? 'Hide' : 'Show All'}
-          </button>
-        </div>
-        {callHistory.length === 0 ? (
-          <p className="text-xs text-gray-500 text-center py-2">No calls yet</p>
-        ) : (
-          <div className={`space-y-2 ${showHistory ? 'max-h-60' : 'max-h-32'} overflow-y-auto`}>
-            {(showHistory ? callHistory : callHistory.slice(0, 3)).map((call) => (
-              <div key={call.id} className="flex justify-between items-center text-sm border-b border-slate-700 pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-300">
-                    {call.isIncoming ? '📥' : '📤'}
-                  </span>
-                  <span className="text-gray-300">{call.participant}</span>
-                  <span className="text-xs text-gray-500">
-                    {new Date(call.startTime).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400">
-                    {call.duration ? formatDuration(call.duration) : 'Ongoing'}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    call.status === 'ongoing' ? 'bg-green-500/20 text-green-400' : 
-                    call.status === 'completed' ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'
-                  }`}>
-                    {call.status}
-                  </span>
-                </div>
-              </div>
-            ))}
+      {callHistory.length > 0 && (
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-gray-300">📞 Call History</h3>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              {showHistory ? 'Hide' : 'Show All'}
+            </button>
           </div>
-        )}
-      </div>
+          {callHistory.length === 0 ? (
+            <p className="text-xs text-gray-500 text-center py-2">No calls yet</p>
+          ) : (
+            <div className={`space-y-2 ${showHistory ? 'max-h-60' : 'max-h-32'} overflow-y-auto`}>
+              {(showHistory ? callHistory : callHistory.slice(0, 3)).map((call) => (
+                <div key={call.id} className="flex justify-between items-center text-sm border-b border-slate-700 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-300">
+                      {call.isIncoming ? '📥' : '📤'}
+                    </span>
+                    <span className="text-gray-300">{call.participant}</span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(call.startTime).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400">
+                      {call.duration ? formatDuration(call.duration) : 'Ongoing'}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      call.status === 'ongoing' ? 'bg-green-500/20 text-green-400' : 
+                      call.status === 'completed' ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {call.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
