@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { getToken, getUser } from '@/lib/auth';
 
 interface User {
   _id: string;
@@ -50,11 +51,11 @@ export default function VideoCall() {
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load user and call history
+  // ✅ FIX: Load user and call history from sessionStorage
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
+    const savedUser = getUser();
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      setUser(savedUser);
     }
     
     const savedHistory = localStorage.getItem('callHistory');
@@ -78,7 +79,8 @@ export default function VideoCall() {
 
     setIsSearching(true);
     try {
-      const token = localStorage.getItem('token');
+      // ✅ FIX: Get token from sessionStorage
+      const token = getToken();
       const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { getToken, getUser, removeToken, removeUser, syncFromLocalStorage } from '@/lib/auth';
 
 interface User {
   id: number;
@@ -27,11 +28,15 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Load user and theme from localStorage on mount
+  // Load user from sessionStorage and theme from localStorage on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
+    // ✅ FIX: Sync from localStorage for existing sessions
+    syncFromLocalStorage();
+    
+    // ✅ FIX: Load user from sessionStorage
+    const savedUser = getUser();
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      setUser(savedUser);
     }
     
     const savedTheme = localStorage.getItem('theme');
@@ -39,6 +44,17 @@ export default function Navbar() {
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
     }
+  }, []);
+
+  // Listen for storage changes (for multi-tab support)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const updatedUser = getUser();
+      setUser(updatedUser);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // ============================================
@@ -126,10 +142,14 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('theme');
-    localStorage.removeItem('userLocation');
+    // ✅ FIX: Remove from sessionStorage instead of localStorage
+    removeToken();
+    removeUser();
+    
+    // Keep theme and location in localStorage (user preferences)
+    // localStorage.removeItem('theme');
+    // localStorage.removeItem('userLocation');
+    
     setUser(null);
     toast.success('Logged out successfully');
     router.push('/login');

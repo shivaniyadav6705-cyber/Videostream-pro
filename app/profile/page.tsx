@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { getToken, getUser, setUser } from '@/lib/auth';
 import Navbar from '@/components/Navbar';
 
 interface Download {
@@ -93,9 +94,10 @@ export default function ProfilePage() {
     return 'https://www.w3schools.com/html/mov_bbb.mp4';
   };
 
+  // ✅ FIX: Load user from sessionStorage
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+    const token = getToken();
+    const savedUser = getUser();
     
     if (!token || !savedUser) {
       router.push('/login');
@@ -103,8 +105,7 @@ export default function ProfilePage() {
     }
 
     try {
-      const userData = JSON.parse(savedUser);
-      setUser(userData);
+      setUser(savedUser);
       fetchDownloads(token);
     } catch (e) {
       console.error('Error parsing user:', e);
@@ -139,12 +140,13 @@ export default function ProfilePage() {
           plan: data.plan || 'free',
         });
         
-        const savedUser = localStorage.getItem('user');
+        // ✅ FIX: Update sessionStorage with fresh data
+        const savedUser = getUser();
         if (savedUser) {
-          const userData = JSON.parse(savedUser);
+          const userData = savedUser;
           userData.downloadedVideos = downloadsList;
           userData.downloadsToday = data.downloadsToday || 0;
-          localStorage.setItem('user', JSON.stringify(userData));
+          setUser(userData);
         }
         
         console.log(`✅ Loaded ${downloadsList.length} downloads`);
@@ -161,7 +163,7 @@ export default function ProfilePage() {
   };
 
   const handleRefresh = () => {
-    const token = localStorage.getItem('token');
+    const token = getToken();
     if (token) {
       fetchDownloads(token);
       toast.success('Refreshed!');
@@ -212,6 +214,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
+    // ✅ FIX: Remove from sessionStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/login');

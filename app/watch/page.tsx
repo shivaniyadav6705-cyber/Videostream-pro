@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getToken, getUser } from '@/lib/auth';
 import Comments from '@/components/Comments';
 import DownloadButton from '@/components/DownloadButton';
 
@@ -176,15 +177,15 @@ export default function WatchPage() {
 
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
+  // ✅ FIX: Load user from sessionStorage
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+    const token = getToken();
+    const savedUser = getUser();
     if (!token || !savedUser) {
       router.push('/login');
     } else {
-      const userData = JSON.parse(savedUser);
-      setUser(userData);
-      loadWatchTime(userData);
+      setUser(savedUser);
+      loadWatchTime(savedUser);
     }
   }, []);
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { setToken, setUser, getToken, syncFromLocalStorage } from '@/lib/auth';
 
 export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
@@ -25,11 +26,18 @@ export default function LoginPage() {
   const [resendTimer, setResendTimer] = useState(0);
   const router = useRouter();
 
-  // Load saved theme on mount
+  // Load saved theme on mount and check if already logged in
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+    
+    // ✅ FIX: Check sessionStorage for existing login
+    syncFromLocalStorage();
+    const token = getToken();
+    if (token) {
+      router.push('/');
     }
   }, []);
 
@@ -103,8 +111,10 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (res.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // ✅ FIX: Use sessionStorage instead of localStorage
+        setToken(data.token);
+        setUser(data.user);
+        
         if (data.theme) {
           document.documentElement.setAttribute('data-theme', data.theme);
           localStorage.setItem('theme', data.theme);
@@ -175,8 +185,10 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (res.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // ✅ FIX: Use sessionStorage instead of localStorage
+        setToken(data.token);
+        setUser(data.user);
+        
         if (data.theme) {
           document.documentElement.setAttribute('data-theme', data.theme);
           localStorage.setItem('theme', data.theme);

@@ -3,19 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getToken, getUser } from '@/lib/auth';
 import VideoCall from '@/components/VideoCall';
 
 export default function VideoCallPage() {
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
+  // ✅ FIX: Load user from sessionStorage
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+    const token = getToken();
+    const savedUser = getUser();
     if (!token || !savedUser) {
       router.push('/login');
     } else {
-      setUser(JSON.parse(savedUser));
+      setUser(savedUser);
     }
   }, []);
 

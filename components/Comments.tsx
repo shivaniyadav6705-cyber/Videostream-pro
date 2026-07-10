@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { getToken, getUser } from '@/lib/auth';
 
 interface Comment {
   _id: string;
@@ -66,13 +67,13 @@ export default function Comments({ videoId }: CommentsProps) {
     { code: 'fr', name: 'Français' }
   ];
 
-  // Load user data and city
+  // ✅ FIX: Load user data and city from sessionStorage
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
+    const savedUser = getUser();
+    const token = getToken();
     
     if (savedUser && token) {
-      setUser(JSON.parse(savedUser));
+      setUser(savedUser);
       setIsLoggedIn(true);
     }
     
@@ -117,7 +118,8 @@ export default function Comments({ videoId }: CommentsProps) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
+      // ✅ FIX: Get token from sessionStorage
+      const token = getToken();
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: {
@@ -154,7 +156,8 @@ export default function Comments({ videoId }: CommentsProps) {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      // ✅ FIX: Get token from sessionStorage
+      const token = getToken();
       const res = await fetch(`/api/comments/${commentId}`, {
         method: 'POST',
         headers: {
@@ -182,7 +185,8 @@ export default function Comments({ videoId }: CommentsProps) {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      // ✅ FIX: Get token from sessionStorage
+      const token = getToken();
       const res = await fetch(`/api/comments/${commentId}`, {
         method: 'DELETE',
         headers: {

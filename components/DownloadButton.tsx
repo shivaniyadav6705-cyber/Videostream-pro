@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { getToken, getUser, setUser } from '@/lib/auth';
 
 interface DownloadButtonProps {
   videoId: string;
@@ -21,13 +22,13 @@ export default function DownloadButton({
   const [userPlan, setUserPlan] = useState<string>('free');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // ✅ FIX: Load user from sessionStorage
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+    const token = getToken();
+    const savedUser = getUser();
     if (token && savedUser) {
       setIsLoggedIn(true);
-      const user = JSON.parse(savedUser);
-      setUserPlan(user.plan || 'free');
+      setUserPlan(savedUser.plan || 'free');
     }
   }, []);
 
@@ -41,7 +42,8 @@ export default function DownloadButton({
     setDownloadStatus('downloading');
     setMessage('Processing download...');
 
-    const token = localStorage.getItem('token');
+    // ✅ FIX: Get token from sessionStorage
+    const token = getToken();
 
     try {
       console.log('📥 Downloading:', videoTitle);
@@ -72,11 +74,11 @@ export default function DownloadButton({
         setMessage(`✅ ${videoTitle} downloaded!`);
         toast.success(`${videoTitle} downloaded!`);
 
-        // ✅ Update localStorage with fresh data
-        const savedUser = localStorage.getItem('user');
+        // ✅ FIX: Update sessionStorage with fresh data
+        const savedUser = getUser();
         if (savedUser) {
-          const user = JSON.parse(savedUser);
-          // ✅ Add new download to front of array
+          const user = savedUser;
+          // Add new download to front of array
           const newDownload = {
             id: Date.now(),
             videoId,
@@ -88,10 +90,10 @@ export default function DownloadButton({
           const updatedDownloads = [newDownload, ...(user.downloadedVideos || [])];
           user.downloadedVideos = updatedDownloads;
           user.downloadsToday = data.downloadsToday || 0;
-          localStorage.setItem('user', JSON.stringify(user));
+          setUser(user);
         }
 
-        // ✅ Simulate file download
+        // Simulate file download
         const videoContent = `
           Video: ${videoTitle}
           Duration: ${videoDuration}

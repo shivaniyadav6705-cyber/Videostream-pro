@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getToken, getUser, setUser } from '@/lib/auth';
 
 declare global {
   interface Window {
@@ -16,13 +17,14 @@ export default function UpgradePage() {
   const [message, setMessage] = useState('');
   const router = useRouter();
 
+  // ✅ FIX: Load user from sessionStorage
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+    const token = getToken();
+    const savedUser = getUser();
     if (!token || !savedUser) {
       router.push('/login');
     } else {
-      setUser(JSON.parse(savedUser));
+      setUser(savedUser);
     }
 
     // Load Razorpay script
@@ -46,7 +48,8 @@ export default function UpgradePage() {
     setLoading(true);
     setMessage('');
     
-    const token = localStorage.getItem('token');
+    // ✅ FIX: Get token from sessionStorage
+    const token = getToken();
     
     if (!token) {
       setMessage('Please login again');
@@ -126,7 +129,8 @@ export default function UpgradePage() {
             
             if (verifyRes.ok && verifyData.success) {
               const updatedUser = { ...user, plan: plan.id };
-              localStorage.setItem('user', JSON.stringify(updatedUser));
+              // ✅ FIX: Update sessionStorage
+              setUser(updatedUser);
               setUser(updatedUser);
               setMessage(`✅ Successfully upgraded to ${plan.name} Plan!`);
               setTimeout(() => router.push('/'), 2000);
@@ -158,6 +162,7 @@ export default function UpgradePage() {
   };
 
   const handleLogout = () => {
+    // ✅ FIX: Remove from sessionStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/login');
