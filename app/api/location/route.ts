@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
   try {
-    // Get client IP from headers
+   
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 
                req.headers.get('x-real-ip') || 
                'unknown';
     
     console.log(`📍 Client IP: ${ip}`);
     
-    // Try to get location from IP
+    
     try {
       const response = await fetch(`https://ipapi.co/${ip}/json/`);
       const data = await response.json();
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     } catch (ipError) {
       console.error('IP lookup failed:', ipError);
       
-      // Fallback: Use browser geolocation (client will provide)
+     
       return NextResponse.json({
         city: 'Unknown',
         state: 'Unknown',

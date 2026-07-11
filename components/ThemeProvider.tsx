@@ -10,7 +10,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     if (savedTheme) {
       document.documentElement.setAttribute('data-theme', savedTheme);
     } else {
-      // Default to dark
+      
       document.documentElement.setAttribute('data-theme', 'dark');
     }
     setMounted(true);

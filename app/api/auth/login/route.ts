@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const userId = user._id.toString();
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
-    // Clear existing OTP and store new one
+    
     if (global._otps.has(userId)) {
       global._otps.delete(userId);
     }
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       message: `OTP sent to your ${method}`,
       userId: userId,
       method,
-      otp: otp, // FOR TESTING ONLY
+      otp: otp, 
     });
   } catch (error: any) {
     console.error('Login error:', error);

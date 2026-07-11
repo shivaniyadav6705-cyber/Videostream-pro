@@ -44,11 +44,11 @@ export default function ProfilePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const router = useRouter();
 
-  // ✅ WORKING VIDEO URLS - Reliable sources
+  
   const getVideoUrl = (videoTitle: string): string => {
-    // Map video titles to ACTUAL working video URLs
+    
     const videoMap: Record<string, string> = {
-      // Google's sample videos (most reliable)
+      
       'Big Buck Bunny': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
       'Elephants Dream': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
       'Sintel': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
@@ -67,34 +67,34 @@ export default function ProfilePage() {
       'Video Demo': 'https://storage.googleapis.com/gtv-videos-bucket/sample/VideoPlayerOutOfSync.mp4',
     };
 
-    // Check for emoji or special characters in title
+    
     const cleanTitle = videoTitle.replace(/[^a-zA-Z0-9 ]/g, '').trim();
     
-    // Try exact match first
+   
     if (videoMap[cleanTitle]) {
       return videoMap[cleanTitle];
     }
     
-    // Try partial match
+   
     for (const [key, value] of Object.entries(videoMap)) {
       if (cleanTitle.includes(key) || key.includes(cleanTitle)) {
         return value;
       }
     }
     
-    // Try without emojis
+   
     for (const [key, value] of Object.entries(videoMap)) {
       if (videoTitle.includes(key)) {
         return value;
       }
     }
     
-    // Default fallback - W3Schools video (always works)
+   
     console.log('🎬 Using fallback video for:', videoTitle);
     return 'https://www.w3schools.com/html/mov_bbb.mp4';
   };
 
-  // ✅ FIX: Load user from sessionStorage
+  
   useEffect(() => {
     const token = getToken();
     const savedUser = getUser();
@@ -140,7 +140,7 @@ export default function ProfilePage() {
           plan: data.plan || 'free',
         });
         
-        // ✅ FIX: Update sessionStorage with fresh data
+       
         const savedUser = getUser();
         if (savedUser) {
           const userData = savedUser;
@@ -176,7 +176,7 @@ export default function ProfilePage() {
     setSelectedVideo(download);
     setIsModalOpen(true);
     
-    // Force play after modal opens
+  
     setTimeout(() => {
       if (videoRef.current) {
         const videoUrl = getVideoUrl(download.videoTitle);
@@ -184,7 +184,7 @@ export default function ProfilePage() {
         videoRef.current.load();
         videoRef.current.play().catch((err) => {
           console.error('Autoplay error:', err);
-          // User will click play manually
+         
         });
       }
     }, 300);
@@ -204,7 +204,7 @@ export default function ProfilePage() {
   const handleVideoError = () => {
     console.error('🎬 Video failed to load');
     setVideoError(true);
-    // Try fallback video
+   
     if (videoRef.current && selectedVideo) {
       const fallbackUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
       videoRef.current.src = fallbackUrl;
@@ -214,7 +214,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    // ✅ FIX: Remove from sessionStorage
+    
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/login');
@@ -253,7 +253,7 @@ export default function ProfilePage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
-          {/* Profile Header */}
+          { }
           <div className="flex items-center gap-6 flex-wrap mb-6">
             <div className="text-6xl">👤</div>
             <div>
@@ -268,7 +268,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Stats Cards */}
+          { }
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-slate-700/50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-white">{stats.totalDownloads}</p>
@@ -280,7 +280,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Refresh Button */}
+          { }
           <div className="flex justify-end mb-4">
             <button
               onClick={handleRefresh}
@@ -291,7 +291,7 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          {/* Downloads Section */}
+          { }
           <div className="mt-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-white">📥 My Downloads</h2>
@@ -335,7 +335,7 @@ export default function ProfilePage() {
         </div>
       </main>
 
-      {/* ✅ Video Player Modal - FIXED */}
+      { }
       {isModalOpen && selectedVideo && (
         <div 
           className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
@@ -345,7 +345,7 @@ export default function ProfilePage() {
             className="relative max-w-4xl w-full bg-black rounded-xl overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
+            { }
             <button
               onClick={closeModal}
               className="absolute top-4 right-4 z-10 bg-red-600 hover:bg-red-700 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl transition"
@@ -353,13 +353,13 @@ export default function ProfilePage() {
               ✕
             </button>
 
-            {/* Video Info */}
+            { }
             <div className="p-4 bg-gradient-to-r from-purple-600 to-pink-600">
               <h3 className="text-white font-semibold text-lg">{selectedVideo.videoTitle}</h3>
               <p className="text-white/70 text-sm">⏱️ Duration: {selectedVideo.videoDuration}</p>
             </div>
 
-            {/* Video Player */}
+            { }
             <div className="relative">
               <video
                 ref={videoRef}
@@ -374,7 +374,7 @@ export default function ProfilePage() {
                 Your browser does not support the video tag.
               </video>
               
-              {/* Loading/Error overlay */}
+              { }
               {videoError && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                   <div className="text-white text-center">
@@ -386,7 +386,7 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Footer */}
+            { }
             <div className="p-3 bg-slate-900 text-center text-gray-400 text-xs">
               💡 Downloaded on: {formatDate(selectedVideo.downloadedAt)}
             </div>

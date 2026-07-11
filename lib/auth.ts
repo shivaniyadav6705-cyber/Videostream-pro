@@ -1,7 +1,3 @@
-// ============================================
-// AUTH UTILITIES - Uses sessionStorage for multi-tab support
-// ============================================
-
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   return sessionStorage.getItem('token');
@@ -38,7 +34,6 @@ export function isLoggedIn(): boolean {
   return !!sessionStorage.getItem('token');
 }
 
-// Sync from localStorage to sessionStorage (for existing users)
 export function syncFromLocalStorage(): void {
   if (typeof window === 'undefined') return;
   const token = localStorage.getItem('token');

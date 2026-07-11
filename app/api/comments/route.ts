@@ -4,7 +4,7 @@ import Comment from '@/models/Comment';
 import User from '@/models/User';
 import jwt from 'jsonwebtoken';
 
-// GET - Fetch comments for a video
+
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
@@ -29,14 +29,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Create a new comment
+
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
     const body = await req.json();
     const { videoId, text, city } = body;
 
-    // Get token
+    
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
 
@@ -46,13 +46,13 @@ export async function POST(req: NextRequest) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     
-    // ✅ Get user from database
+   
     const user = await User.findById(decoded.userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check for special characters
+   
     const specialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
     if (specialChars.test(text)) {
       return NextResponse.json({ 
@@ -60,10 +60,10 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // ✅ userId is now a string (user._id.toString())
+    
     const comment = await Comment.create({
       videoId,
-      userId: user._id.toString(), // ✅ Convert ObjectId to string
+      userId: user._id.toString(), 
       username: user.username,
       text,
       city: city || 'Unknown',

@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
       }, { status: 401 });
     }
 
-    // Verify token
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;

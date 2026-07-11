@@ -22,7 +22,7 @@ interface CommentsProps {
   videoId: string;
 }
 
-// Get user's city from IP (using free API)
+
 const getUserCity = async (): Promise<string> => {
   try {
     const res = await fetch('https://ipapi.co/json/');
@@ -33,7 +33,7 @@ const getUserCity = async (): Promise<string> => {
   }
 };
 
-// Simple translation function (using free API)
+
 const translateText = async (text: string, targetLang: string): Promise<string> => {
   if (targetLang === 'en') return text;
   
@@ -67,7 +67,7 @@ export default function Comments({ videoId }: CommentsProps) {
     { code: 'fr', name: 'Français' }
   ];
 
-  // ✅ FIX: Load user data and city from sessionStorage
+  
   useEffect(() => {
     const savedUser = getUser();
     const token = getToken();
@@ -80,7 +80,7 @@ export default function Comments({ videoId }: CommentsProps) {
     getUserCity().then(setUserCity);
     loadComments();
     
-    // Refresh comments every 10 seconds to show new ones
+   
     const interval = setInterval(loadComments, 10000);
     return () => clearInterval(interval);
   }, [videoId]);
@@ -103,7 +103,7 @@ export default function Comments({ videoId }: CommentsProps) {
       return;
     }
 
-    // Check for special characters
+   
     const specialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
     if (specialChars.test(newComment)) {
       toast.error('Comments cannot contain special characters like !@#$%^&*');
@@ -118,7 +118,7 @@ export default function Comments({ videoId }: CommentsProps) {
     setLoading(true);
 
     try {
-      // ✅ FIX: Get token from sessionStorage
+      
       const token = getToken();
       const res = await fetch('/api/comments', {
         method: 'POST',
@@ -156,7 +156,7 @@ export default function Comments({ videoId }: CommentsProps) {
     }
 
     try {
-      // ✅ FIX: Get token from sessionStorage
+      
       const token = getToken();
       const res = await fetch(`/api/comments/${commentId}`, {
         method: 'POST',
@@ -185,7 +185,7 @@ export default function Comments({ videoId }: CommentsProps) {
     }
 
     try {
-      // ✅ FIX: Get token from sessionStorage
+     
       const token = getToken();
       const res = await fetch(`/api/comments/${commentId}`, {
         method: 'DELETE',
@@ -213,16 +213,16 @@ export default function Comments({ videoId }: CommentsProps) {
 
   const handleTranslate = async (commentId: string, text: string) => {
     if (translateLang === 'en') {
-      // If English selected, remove translation
+     
       const updated = { ...translations };
       delete updated[commentId];
       setTranslations(updated);
       return;
     }
     
-    // Check if already translated to this language
+    
     if (translations[commentId]) {
-      // Remove translation if already shown
+      
       const updated = { ...translations };
       delete updated[commentId];
       setTranslations(updated);
@@ -259,7 +259,7 @@ export default function Comments({ videoId }: CommentsProps) {
         💬 Comments ({comments.length})
       </h3>
 
-      {/* Language Selector for Translation */}
+      { }
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <span className="text-sm text-gray-400">🌐 Translate comments to:</span>
         <select
@@ -273,7 +273,7 @@ export default function Comments({ videoId }: CommentsProps) {
         </select>
       </div>
 
-      {/* Comment Input */}
+      { }
       <div className="flex gap-3 mb-6">
         <input
           type="text"
@@ -293,14 +293,14 @@ export default function Comments({ videoId }: CommentsProps) {
         </button>
       </div>
 
-      {/* Login prompt if not logged in */}
+      { }
       {!isLoggedIn && (
         <div className="text-center text-sm text-gray-400 mb-4">
           🔐 <a href="/login" className="text-blue-400 hover:underline">Login</a> to post, like, and dislike comments
         </div>
       )}
 
-      {/* Comments List */}
+      { }
       <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
         {comments.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
@@ -309,7 +309,7 @@ export default function Comments({ videoId }: CommentsProps) {
         ) : (
           comments.map((comment) => (
             <div key={comment._id} className="bg-slate-700/50 rounded-lg p-4">
-              {/* Comment Header */}
+              { }
               <div className="flex justify-between items-start flex-wrap gap-2 mb-2">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-blue-400">
@@ -324,7 +324,7 @@ export default function Comments({ videoId }: CommentsProps) {
                 </span>
               </div>
 
-              {/* Comment Text with Translation */}
+              { }
               <div className="mb-3">
                 <p className="text-gray-200">
                   {isTranslated(comment._id) ? translations[comment._id] : comment.text}
@@ -343,7 +343,7 @@ export default function Comments({ videoId }: CommentsProps) {
                 )}
               </div>
 
-              {/* Action Buttons */}
+              { }
               <div className="flex items-center gap-4 flex-wrap">
                 <button
                   onClick={() => handleLike(comment._id)}
@@ -373,7 +373,7 @@ export default function Comments({ videoId }: CommentsProps) {
         )}
       </div>
 
-      {/* Stats Footer */}
+      { }
       {comments.length > 0 && (
         <div className="mt-4 text-xs text-gray-500 text-center border-t border-slate-700 pt-3">
           {comments.length} comments • 

@@ -38,7 +38,7 @@ export default function VideoCall() {
   const [showHistory, setShowHistory] = useState(false);
   const [callType, setCallType] = useState<'audio' | 'video'>('video');
   
-  // New states for user search
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -51,7 +51,7 @@ export default function VideoCall() {
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ FIX: Load user and call history from sessionStorage
+
   useEffect(() => {
     const savedUser = getUser();
     if (savedUser) {
@@ -64,13 +64,13 @@ export default function VideoCall() {
     }
   }, []);
 
-  // Generate meeting ID
+
   const generateMeetingId = () => {
     return Math.random().toString(36).substring(2, 10) + 
            Math.random().toString(36).substring(2, 6);
   };
 
-  // Search users
+
   const searchUsers = async (query: string) => {
     if (!query.trim() || query.length < 2) {
       setSearchResults([]);
@@ -79,7 +79,7 @@ export default function VideoCall() {
 
     setIsSearching(true);
     try {
-      // ✅ FIX: Get token from sessionStorage
+      
       const token = getToken();
       const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -96,7 +96,7 @@ export default function VideoCall() {
     }
   };
 
-  // Handle search input with debounce
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -110,7 +110,7 @@ export default function VideoCall() {
     }, 500);
   };
 
-  // Call a user
+
   const callUser = (user: User) => {
     setSelectedUser(user);
     setCallWithUser(user);
@@ -118,11 +118,11 @@ export default function VideoCall() {
     setSearchQuery('');
     setSearchResults([]);
     
-    // Start the call
+  
     startCall('video', user);
   };
 
-  // Start call with specific user
+
   const startCall = (type: 'audio' | 'video', targetUser?: User) => {
     const newMeetingId = generateMeetingId();
     setMeetingId(newMeetingId);
@@ -132,10 +132,10 @@ export default function VideoCall() {
     setMeetingLink(link);
     setIsCallActive(true);
     
-    // Open Google Meet in new window
+   
     window.open(link, '_blank');
     
-    // Start call duration timer
+   
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current);
     }
@@ -144,7 +144,7 @@ export default function VideoCall() {
       setCallDuration(prev => prev + 1);
     }, 1000);
     
-    // Save to call history
+   
     const participantName = targetUser ? targetUser.username : 'Unknown User';
     const participantId = targetUser ? targetUser._id : 'unknown';
     
@@ -166,7 +166,7 @@ export default function VideoCall() {
     toast.success(message);
   };
 
-  // Join existing meeting
+ 
   const joinCall = () => {
     if (!meetingId) {
       toast.error('Please enter a Meeting ID');
@@ -190,7 +190,7 @@ export default function VideoCall() {
     toast.success('✅ Joining meeting...');
   };
 
-  // Screen Sharing
+  
   const startScreenShare = async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ 
@@ -215,7 +215,7 @@ export default function VideoCall() {
     }
   };
 
-  // Recording
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ 
@@ -293,7 +293,7 @@ export default function VideoCall() {
       clearInterval(durationIntervalRef.current);
     }
     
-    // Update call history
+   
     const updatedHistory = callHistory.map(call => {
       if (call.meetingId === meetingId && call.status === 'ongoing') {
         return {
@@ -338,11 +338,11 @@ export default function VideoCall() {
     }
   };
 
-  // If call is active
+ 
   if (isCallActive) {
     return (
       <div className="space-y-4">
-        {/* Call Controls */}
+        { }
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
             <div>
@@ -403,14 +403,14 @@ export default function VideoCall() {
             </div>
           </div>
           
-          {/* Recording Indicator */}
+          { }
           {isRecording && (
             <div className="mb-3 p-2 bg-red-500/20 border border-red-500/30 rounded-lg text-center text-red-400 animate-pulse">
               🔴 Recording in progress... Click "Stop Recording" to save
             </div>
           )}
           
-          {/* Google Meet iframe */}
+          { }
           <div className="aspect-video w-full rounded-xl overflow-hidden border border-slate-700 bg-black">
             <iframe
               src={`https://meet.google.com/${meetingId}`}
@@ -420,7 +420,7 @@ export default function VideoCall() {
             />
           </div>
           
-          {/* Meeting Info */}
+          { }
           <div className="mt-3 flex items-center justify-center gap-4 text-sm flex-wrap">
             <span className="text-gray-400">
               Meeting ID: <span className="font-mono text-blue-400">{meetingId}</span>
@@ -437,7 +437,7 @@ export default function VideoCall() {
           </div>
         </div>
         
-        {/* Feature Guide */}
+        { }
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-sm text-center">
           <p className="text-blue-300">
             💡 <strong>YouTube Screen Sharing:</strong> Click "Share Screen" → Select the YouTube tab → Watch together!
@@ -447,16 +447,16 @@ export default function VideoCall() {
     );
   }
 
-  // Main Call Interface
+ 
   return (
     <div className="space-y-6">
-      {/* Main Call Interface */}
+      { }
       <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700">
         <div className="text-6xl mb-4">📹</div>
         <h2 className="text-2xl font-bold text-white mb-2">Video Call</h2>
         <p className="text-gray-400 mb-6">Connect with friends using Google Meet</p>
         
-        {/* User Search Section */}
+        { }
         <div className="mb-6">
           <button
             onClick={() => setShowSearch(!showSearch)}
@@ -480,7 +480,7 @@ export default function VideoCall() {
                 )}
               </div>
               
-              {/* Search Results */}
+              { }
               {searchResults.length > 0 && (
                 <div className="mt-2 bg-slate-700 rounded-lg overflow-hidden">
                   {searchResults.map((result) => (
@@ -519,14 +519,14 @@ export default function VideoCall() {
           )}
         </div>
         
-        {/* Divider */}
+        { }
         <div className="flex items-center gap-4 my-6">
           <div className="flex-1 h-px bg-slate-600"></div>
           <span className="text-gray-400 text-sm">OR</span>
           <div className="flex-1 h-px bg-slate-600"></div>
         </div>
         
-        {/* Call Buttons */}
+        { }
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={() => startCall('video')}
@@ -568,7 +568,7 @@ export default function VideoCall() {
         </div>
       </div>
       
-      {/* Call History */}
+      { }
       {callHistory.length > 0 && (
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
           <div className="flex justify-between items-center mb-3">

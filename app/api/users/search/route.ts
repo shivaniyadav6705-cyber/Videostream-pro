@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
-    // Search for users (excluding current user)
+   
     const users = await User.find({
       $and: [
         { _id: { $ne: decoded.userId } },

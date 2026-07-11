@@ -10,7 +10,6 @@ export default function VideoCallPage() {
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
-  // ✅ FIX: Load user from sessionStorage
   useEffect(() => {
     const token = getToken();
     const savedUser = getUser();

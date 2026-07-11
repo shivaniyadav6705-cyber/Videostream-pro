@@ -26,14 +26,14 @@ export default function LoginPage() {
   const [resendTimer, setResendTimer] = useState(0);
   const router = useRouter();
 
-  // Load saved theme on mount and check if already logged in
+ 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       document.documentElement.setAttribute('data-theme', savedTheme);
     }
     
-    // ✅ FIX: Check sessionStorage for existing login
+   
     syncFromLocalStorage();
     const token = getToken();
     if (token) {
@@ -111,7 +111,7 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (res.ok) {
-        // ✅ FIX: Use sessionStorage instead of localStorage
+       
         setToken(data.token);
         setUser(data.user);
         
@@ -156,7 +156,7 @@ export default function LoginPage() {
         startResendTimer();
         toast.success(`OTP sent to your ${data.method}`);
         
-        // Apply theme from backend
+        
         if (data.theme) {
           document.documentElement.setAttribute('data-theme', data.theme);
           localStorage.setItem('theme', data.theme);
@@ -185,7 +185,7 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (res.ok) {
-        // ✅ FIX: Use sessionStorage instead of localStorage
+       
         setToken(data.token);
         setUser(data.user);
         
@@ -204,7 +204,6 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  // OTP Step UI
   if (step === 'otp') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
@@ -273,7 +272,7 @@ export default function LoginPage() {
     );
   }
 
-  // Credentials Step UI
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
       <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">

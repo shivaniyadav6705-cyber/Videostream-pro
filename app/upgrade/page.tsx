@@ -17,7 +17,7 @@ export default function UpgradePage() {
   const [message, setMessage] = useState('');
   const router = useRouter();
 
-  // ✅ FIX: Load user from sessionStorage
+ 
   useEffect(() => {
     const token = getToken();
     const savedUser = getUser();
@@ -27,7 +27,6 @@ export default function UpgradePage() {
       setUser(savedUser);
     }
 
-    // Load Razorpay script
     if (!document.querySelector('#razorpay-script')) {
       const script = document.createElement('script');
       script.id = 'razorpay-script';
@@ -48,7 +47,7 @@ export default function UpgradePage() {
     setLoading(true);
     setMessage('');
     
-    // ✅ FIX: Get token from sessionStorage
+   
     const token = getToken();
     
     if (!token) {
@@ -81,7 +80,6 @@ export default function UpgradePage() {
 
       console.log('✅ Order created:', data);
 
-      // Wait for Razorpay
       if (!window.Razorpay) {
         await new Promise((resolve) => {
           const checkInterval = setInterval(() => {
@@ -129,7 +127,7 @@ export default function UpgradePage() {
             
             if (verifyRes.ok && verifyData.success) {
               const updatedUser = { ...user, plan: plan.id };
-              // ✅ FIX: Update sessionStorage
+              
               setUser(updatedUser);
               setUser(updatedUser);
               setMessage(`✅ Successfully upgraded to ${plan.name} Plan!`);
@@ -162,7 +160,7 @@ export default function UpgradePage() {
   };
 
   const handleLogout = () => {
-    // ✅ FIX: Remove from sessionStorage
+   
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/login');
@@ -225,7 +223,7 @@ export default function UpgradePage() {
         </div>
 
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>💳 <strong>Test Card:</strong> 4111 1111 1111 1111 | CVV: Any | Expiry: Any future date</p>
+          <p>💳 <strong>Test NetBanking:</strong> Test any NetBanking option to test</p>
           <p className="text-xs mt-1">🔐 Razorpay Test Mode - No actual money deducted</p>
         </div>
       </main>

@@ -3,14 +3,14 @@ import { connectDB } from '@/lib/db';
 import Comment from '@/models/Comment';
 import jwt from 'jsonwebtoken';
 
-// ✅ FIXED: params is now a Promise
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ commentId: string }> }
 ) {
   try {
     await connectDB();
-    const { commentId } = await params; // ✅ Await the params
+    const { commentId } = await params; 
     
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
@@ -39,14 +39,14 @@ export async function POST(
   }
 }
 
-// ✅ FIXED: DELETE method
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ commentId: string }> }
 ) {
   try {
     await connectDB();
-    const { commentId } = await params; // ✅ Await the params
+    const { commentId } = await params; 
     
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
@@ -62,7 +62,7 @@ export async function DELETE(
 
     comment.dislikes += 1;
     
-    // Auto-remove if 2 or more dislikes
+    
     let removed = false;
     if (comment.dislikes >= 2) {
       comment.removed = true;
@@ -82,14 +82,13 @@ export async function DELETE(
   }
 }
 
-// ✅ FIXED: PUT method (optional - for toggling like/dislike)
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ commentId: string }> }
 ) {
   try {
     await connectDB();
-    const { commentId } = await params; // ✅ Await the params
+    const { commentId } = await params; 
     const { action } = await req.json();
     
     const authHeader = req.headers.get('authorization');

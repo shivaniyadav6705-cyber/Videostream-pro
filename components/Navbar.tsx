@@ -28,12 +28,12 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Load user from sessionStorage and theme from localStorage on mount
+  
   useEffect(() => {
-    // ✅ FIX: Sync from localStorage for existing sessions
+    
     syncFromLocalStorage();
     
-    // ✅ FIX: Load user from sessionStorage
+    
     const savedUser = getUser();
     if (savedUser) {
       setUser(savedUser);
@@ -46,7 +46,7 @@ export default function Navbar() {
     }
   }, []);
 
-  // Listen for storage changes (for multi-tab support)
+  
   useEffect(() => {
     const handleStorageChange = () => {
       const updatedUser = getUser();
@@ -57,14 +57,11 @@ export default function Navbar() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // ============================================
-  // CLIENT-SIDE LOCATION DETECTION
-  // Works on both localhost and Vercel
-  // ============================================
+  
   useEffect(() => {
     async function getClientLocation() {
       try {
-        // Check if we have cached location
+       
         const cached = localStorage.getItem('userLocation');
         if (cached) {
           const parsed = JSON.parse(cached);
@@ -72,7 +69,7 @@ export default function Navbar() {
           return;
         }
 
-        // Try browser geolocation first (most accurate)
+        
         if (navigator.geolocation) {
           try {
             const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -97,7 +94,7 @@ export default function Navbar() {
             setLocation(locationData);
             localStorage.setItem('userLocation', JSON.stringify(locationData));
             
-            // Apply theme based on location
+            
             const now = new Date();
             const istHour = (now.getUTCHours() + 5 + 30/60) % 24;
             const isSpecialTime = istHour >= 10 && istHour < 12;
@@ -116,7 +113,7 @@ export default function Navbar() {
           }
         }
 
-        // Fallback: Use IP-based detection
+       
         const response = await fetch('https://ipapi.co/json/');
         const data = await response.json();
         
@@ -133,7 +130,7 @@ export default function Navbar() {
         
       } catch (error) {
         console.error('Location detection failed:', error);
-        // Default location fallback
+       
         setLocation({ city: 'Mumbai', state: 'Maharashtra', isSouthIndia: false });
       }
     }
@@ -142,13 +139,10 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    // ✅ FIX: Remove from sessionStorage instead of localStorage
+   
     removeToken();
     removeUser();
     
-    // Keep theme and location in localStorage (user preferences)
-    // localStorage.removeItem('theme');
-    // localStorage.removeItem('userLocation');
     
     setUser(null);
     toast.success('Logged out successfully');
@@ -188,12 +182,12 @@ export default function Navbar() {
   return (
     <nav className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 px-6 py-4 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex justify-between items-center flex-wrap gap-4">
-        {/* Logo */}
+        {}
         <Link href="/" className="text-xl font-bold text-white hover:text-blue-400 transition">
           🎬 VideoStream Pro
         </Link>
         
-        {/* Navigation Links */}
+        {}
         <div className="flex gap-6">
           <Link 
             href="/" 
@@ -227,9 +221,9 @@ export default function Navbar() {
           </Link>
         </div>
         
-        {/* Right Section: Location, Theme, User */}
+        { }
         <div className="flex items-center gap-4">
-          {/* Location Display - Works on Vercel */}
+          { }
           {location && (
             <div className="hidden md:flex items-center gap-1 text-xs bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700">
               <span>📍</span>
@@ -244,7 +238,7 @@ export default function Navbar() {
             </div>
           )}
           
-          {/* Theme Toggle Button */}
+          { }
           <button
             onClick={handleThemeToggle}
             className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition text-xl border border-slate-700"
@@ -253,7 +247,7 @@ export default function Navbar() {
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
           
-          {/* User Section */}
+          { }
           {user ? (
             <div className="relative">
               <button
@@ -267,7 +261,7 @@ export default function Navbar() {
                 <span className={`text-xs text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
               </button>
 
-              {/* Dropdown Menu */}
+              { }
               {isDropdownOpen && (
                 <>
                   <div 

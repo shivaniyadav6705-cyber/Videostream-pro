@@ -3,9 +3,7 @@ import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import jwt from 'jsonwebtoken';
 
-// ============================================
-// GET - Fetch all downloads for the user
-// ============================================
+
 export async function GET(req: NextRequest) {
   try {
     console.log('📥 GET Downloads API called');
@@ -20,7 +18,6 @@ export async function GET(req: NextRequest) {
       }, { status: 401 });
     }
 
-    // Verify token
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
@@ -41,7 +38,7 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // ✅ Get downloads array (ensure it's an array)
+   
     const downloads = user.downloadedVideos || [];
     const downloadsToday = user.downloadsToday || 0;
 
@@ -65,9 +62,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ============================================
-// POST - Save a new download
-// ============================================
+
 export async function POST(req: NextRequest) {
   try {
     console.log('📥 POST Download API called');
@@ -82,7 +77,7 @@ export async function POST(req: NextRequest) {
       }, { status: 401 });
     }
 
-    // Verify token
+   
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
@@ -116,7 +111,7 @@ export async function POST(req: NextRequest) {
     console.log(`👤 User: ${user.username}`);
     console.log(`📋 Plan: ${user.plan}`);
 
-    // ✅ Check daily download limit
+   
     const today = new Date().toDateString();
     if (user.downloadDate !== today) {
       user.downloadsToday = 0;
@@ -139,7 +134,7 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // ✅ Create download record
+   
     const downloadRecord = {
       id: Date.now(),
       videoId: videoId || 'unknown',
@@ -149,16 +144,16 @@ export async function POST(req: NextRequest) {
       downloadedAt: new Date().toISOString(),
     };
 
-    // ✅ Initialize array if it doesn't exist
+  
     if (!user.downloadedVideos) {
       user.downloadedVideos = [];
     }
 
-    // ✅ Add to beginning of array (newest first)
+   
     user.downloadedVideos.unshift(downloadRecord);
     user.downloadsToday += 1;
 
-    // ✅ Save user
+   
     await user.save();
 
     console.log(`✅ Download saved: ${videoTitle}`);

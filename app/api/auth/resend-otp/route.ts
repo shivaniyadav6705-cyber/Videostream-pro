@@ -4,7 +4,7 @@ import User from '@/models/User';
 import { sendEmailOTP, sendSMSOTP, generateOTP } from '@/lib/email';
 import { getLocationFromIP, getOTPMethod } from '@/lib/location';
 
-// Use Map for consistency with login and verify-otp
+
 declare global {
   var _otps: Map<string, { otp: string; expiresAt: number }>;
 }
@@ -26,16 +26,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Get location
+ 
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
     const location = await getLocationFromIP(ip);
     const method = getOTPMethod(location);
 
-    // Generate new OTP
+  
     const otp = generateOTP();
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
-    // Store OTP - clear existing first
+  
     if (global._otps.has(userId)) {
       global._otps.delete(userId);
     }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     console.log(`📧 Method: ${method}`);
     console.log(`📝 OTP stored for user: ${userId}`);
 
-    // Send OTP
+    
     if (method === 'email') {
       await sendEmailOTP(user.email, otp);
     } else {
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `New OTP sent to your ${method}`,
-      otp: otp, // FOR TESTING ONLY
+      otp: otp, 
       expiresAt: expiresAt,
     });
   } catch (error: any) {

@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const CommentSchema = new mongoose.Schema({
   videoId: { type: String, required: true },
-  userId: { type: String, required: true }, // ✅ Changed from Number to String
+  userId: { type: String, required: true }, 
   username: { type: String, required: true },
   text: { type: String, required: true },
   city: { type: String, default: 'Unknown' },

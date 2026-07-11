@@ -1,9 +1,7 @@
 import { Resend } from 'resend';
 import twilio from 'twilio';
 
-// ============================================
-// RESEND CONFIGURATION (Email OTP)
-// ============================================
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
@@ -20,9 +18,7 @@ if (RESEND_API_KEY) {
   }
 }
 
-// ============================================
-// TWILIO CONFIGURATION (SMS OTP)
-// ============================================
+
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;

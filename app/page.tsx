@@ -11,7 +11,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // ✅ FIX: Load user from sessionStorage
+  
   useEffect(() => {
     const token = getToken();
     const savedUser = getUser();
@@ -166,7 +166,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* User Info Banner */}
+          { }
           <div className="bg-card rounded-xl p-4 mb-8 text-center border border-theme">
             <p className="text-gray-300">
               Welcome back, <strong className="text-primary">{user.username}</strong>! 
@@ -176,13 +176,13 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Section Header */}
+          { }
           <div className="section-header">
             <h2>🔥 Featured Videos</h2>
             <p>Watch the most popular content</p>
           </div>
 
-          {/* Video Grid */}
+          { }
           <div className="video-grid">
             {featuredVideos.map((video) => (
               <Link href="/watch" key={video.id} className="video-card">
@@ -203,7 +203,7 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Categories Section */}
+          { }
           <div className="mt-12">
             <div className="section-header">
               <h2>📂 Browse by Category</h2>
@@ -233,7 +233,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Call to Action for Free Users */}
+          { }
           {user.plan === 'free' && (
             <div className="mt-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-6 text-center">
               <h3 className="text-xl font-bold text-white mb-2">✨ Upgrade to Premium ✨</h3>
@@ -246,7 +246,7 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Footer */}
+      { }
       <footer className="footer">
         <div className="footer-content">
           <div className="footer-section">

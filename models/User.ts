@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema({
   watchDate: { type: String, default: () => new Date().toDateString() },
   downloadsToday: { type: Number, default: 0 },
   downloadDate: { type: String, default: () => new Date().toDateString() },
-  // ✅ IMPORTANT: This field stores all downloaded videos
+  
   downloadedVideos: { 
     type: [{
       id: { type: Number, required: true },

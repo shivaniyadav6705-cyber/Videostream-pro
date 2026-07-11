@@ -20,7 +20,7 @@ export default function WatchPage() {
   const [showControls, setShowControls] = useState(true);
   const [gestureMessage, setGestureMessage] = useState('');
   
-  // Gesture detection refs
+
   const tapCountRef = useRef(0);
   const tapPositionRef = useRef<string | null>(null);
   const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -29,10 +29,7 @@ export default function WatchPage() {
 
   const router = useRouter();
 
-  // ============================================
-  // 100% WORKING VIDEOS - All from W3Schools (guaranteed to work)
-  // Each video has a different title but same reliable source
-  // ============================================
+  
   const PLAYLIST = [
   { src: "https://www.pexels.com/download/video/38104915/", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 1"},
   { src: "https://www.pexels.com/download/video/18120715/", innerHeight:"300px", innerWidth:"300px", title: "🎬 Video 2"},
@@ -56,15 +53,15 @@ export default function WatchPage() {
   { src: "https://www.pexels.com/download/video/37860532/", innerHeight:"300px", innerWidth:"300px", title: "📹 Video 20"},
 ];
 
-  // Watch time limits per plan (in seconds)
+  
   const PLAN_LIMITS: Record<string, number> = {
-    free: 300,      // 5 minutes
-    bronze: 420,    // 7 minutes
-    silver: 600,    // 10 minutes
-    gold: Infinity  // Unlimited
+    free: 300,      
+    bronze: 420,    
+    silver: 600,    
+    gold: Infinity  
   };
 
-  // Auto-hide controls
+ 
   useEffect(() => {
     if (showControls) {
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -78,7 +75,7 @@ export default function WatchPage() {
     setTimeout(() => setGestureMessage(''), 800);
   };
 
-  // Handle all tap gestures
+
   const handleTap = (e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -96,7 +93,7 @@ export default function WatchPage() {
       const count = tapCountRef.current;
       const pos = tapPositionRef.current;
 
-      // SINGLE TAP - Center: Play/Pause
+     
       if (count === 1 && pos === 'center') {
         if (videoRef.current) {
           if (videoRef.current.paused) {
@@ -110,7 +107,7 @@ export default function WatchPage() {
           }
         }
       }
-      // DOUBLE TAP - Left/Right: Seek ±10 seconds
+      
       else if (count === 2) {
         if (pos === 'right' && videoRef.current) {
           videoRef.current.currentTime = Math.min(videoRef.current.currentTime + 10, duration);
@@ -120,7 +117,7 @@ export default function WatchPage() {
           showFeedback('⏪ -10 sec');
         }
       }
-      // TRIPLE TAP - Various actions
+     
       else if (count === 3) {
         if (pos === 'center') {
           handleNextVideo();
@@ -139,7 +136,7 @@ export default function WatchPage() {
     }, 300);
   };
 
-  // Watch time tracking
+ 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       const time = Math.floor(videoRef.current.currentTime);
@@ -177,7 +174,7 @@ export default function WatchPage() {
 
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
-  // ✅ FIX: Load user from sessionStorage
+  
   useEffect(() => {
     const token = getToken();
     const savedUser = getUser();
@@ -244,7 +241,7 @@ export default function WatchPage() {
   const currentVideo = PLAYLIST[currentVideoIndex];
   const totalVideos = PLAYLIST.length;
 
-  // Show watch time expired message
+  
   if (watchTimeLeft === 0 && user.plan !== 'gold') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -277,7 +274,7 @@ export default function WatchPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      {/* Navbar */}
+      { }
       <nav className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center flex-wrap gap-4">
           <Link href="/" className="text-xl font-bold text-white">🎬 VideoStream Pro</Link>
@@ -301,7 +298,7 @@ export default function WatchPage() {
         </div>
       </nav>
 
-      {/* Watch Time Warning */}
+      { }
       {user.plan !== 'gold' && watchTimeLeft !== null && watchTimeLeft > 0 && (
         <div className="max-w-5xl mx-auto px-4 pt-4">
           <div className={`text-center py-2 rounded-lg ${watchTimeLeft < 60 ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
@@ -318,7 +315,7 @@ export default function WatchPage() {
         </div>
       )}
 
-      {/* Main Content */}
+      { }
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="mb-4 flex justify-between items-center flex-wrap gap-4">
           <div>
@@ -352,7 +349,7 @@ export default function WatchPage() {
           </div>
         </div>
 
-        {/* Video Player with Gestures */}
+        { }
         <div 
           ref={containerRef} 
           className="relative group bg-black rounded-xl overflow-hidden" 
@@ -375,14 +372,14 @@ export default function WatchPage() {
             Your browser does not support the video tag.
           </video>
           
-          {/* Gesture Feedback Toast */}
+          { }
           {gestureMessage && (
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-lg font-semibold z-50 pointer-events-none animate-fadeOut">
               {gestureMessage}
             </div>
           )}
           
-          {/* Video Controls */}
+          { }
           <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
             <input 
               type="range" 
@@ -420,7 +417,7 @@ export default function WatchPage() {
             </div>
           </div>
           
-          {/* Gesture Guide */}
+          { }
           <div className="absolute bottom-4 left-4 bg-black/60 text-white text-xs px-3 py-2 rounded-lg pointer-events-none">
             🎮 Tap: Center ▶️⏸️ | Double Tap ±10s | Triple Tap Center ⏭️ | Triple Tap Left 💬 | Triple Tap Right : Close website
           </div>
@@ -428,7 +425,7 @@ export default function WatchPage() {
         
         {showComments && <Comments videoId={`video-${currentVideoIndex}`} />}
         
-        {/* Gesture Instructions */}
+        { }
         <div className="mt-4 text-center text-xs text-gray-500">
           💡 Gesture Tips: Single tap = Play/Pause | Double tap sides = ±10 seconds | Triple tap center = Next video | Triple tap left = Comments | Triple Tap Right = Close Website
         </div>

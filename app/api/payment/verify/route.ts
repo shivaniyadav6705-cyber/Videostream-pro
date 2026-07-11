@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     console.log(`📋 Plan Name: ${planName}`);
     console.log('='.repeat(50) + '\n');
 
-    // Get token
+   
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.split(' ')[1];
 
@@ -49,11 +49,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No token provided' }, { status: 401 });
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     console.log(`👤 User ID: ${decoded.userId}`);
 
-    // Verify Razorpay signature
+ 
     const text = razorpay_order_id + '|' + razorpay_payment_id;
     const signature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
@@ -67,7 +66,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    // Find user
+    
     const user = await User.findById(decoded.userId);
     if (!user) {
       console.log('❌ User not found');
@@ -77,7 +76,7 @@ export async function POST(req: NextRequest) {
     console.log(`👤 User: ${user.username} (${user.email})`);
     console.log(`📋 Previous Plan: ${user.plan}`);
 
-    // Update user
+   
     const now = new Date();
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 30);
@@ -93,9 +92,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`✅ User upgraded to: ${planName}`);
 
-    // ============================================
-    // SEND REAL INVOICE EMAIL TO USER'S EMAIL
-    // ============================================
+    
     const planInfo = PLAN_DETAILS[planType];
     let emailSent = false;
 
@@ -103,7 +100,7 @@ export async function POST(req: NextRequest) {
       console.log(`📧 Attempting to send invoice to: ${user.email}`);
       
       try {
-        // ✅ THIS SENDS TO THE USER'S ACTUAL EMAIL
+      
         emailSent = await sendInvoiceEmail(user.email, {
           username: user.username,
           planName: planInfo.name,

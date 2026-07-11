@@ -30,21 +30,21 @@ export default function GestureVideoPlayer({
   const [videoError, setVideoError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   
-  // Gesture detection refs
+
   const tapCountRef = useRef(0);
   const tapPositionRef = useRef<'left' | 'center' | 'right' | null>(null);
   const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTapTimeRef = useRef(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fallback video URLs (working alternatives)
+ 
   const fallbackVideos = [
     "https://www.w3schools.com/html/mov_bbb.mp4",
     "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
     "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
   ];
 
-  // Reset loading when src changes
+ 
   useEffect(() => {
     setIsLoading(true);
     setVideoError(false);
@@ -58,7 +58,7 @@ export default function GestureVideoPlayer({
     }
   }, [src]);
 
-  // Auto-hide controls
+
   useEffect(() => {
     if (showControls) {
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -109,7 +109,7 @@ export default function GestureVideoPlayer({
     setTimeout(() => setGestureMessage(''), 1000);
   };
 
-  // Handle gesture
+ 
   const handleGesture = useCallback((clientX: number, containerRect: DOMRect) => {
     const x = clientX - containerRect.left;
     const width = containerRect.width;
@@ -219,7 +219,7 @@ export default function GestureVideoPlayer({
     handleGesture(touch.clientX, rect);
   }, [handleGesture]);
 
-  // Keyboard controls
+  
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (!videoRef.current || videoError) return;
@@ -321,7 +321,7 @@ export default function GestureVideoPlayer({
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Get working video source
+  
   const getVideoSrc = () => {
     if (videoError && retryCount >= fallbackVideos.length) {
       return fallbackVideos[0];
@@ -339,7 +339,7 @@ export default function GestureVideoPlayer({
       onTouchEnd={handleTouchEnd}
       style={{ cursor: 'pointer', touchAction: 'none' }}
     >
-      {/* Video Element */}
+      { }
       <video
         ref={videoRef}
         key={getVideoSrc()}
@@ -357,7 +357,7 @@ export default function GestureVideoPlayer({
         <source src={getVideoSrc()} type="video/mp4" />
       </video>
       
-      {/* Loading Indicator */}
+      { }
       {isLoading && !videoError && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">
           <div className="text-white text-center">
@@ -367,7 +367,7 @@ export default function GestureVideoPlayer({
         </div>
       )}
       
-      {/* Error State */}
+      { }
       {videoError && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
           <div className="text-white text-center">
@@ -389,14 +389,14 @@ export default function GestureVideoPlayer({
         </div>
       )}
       
-      {/* Gesture Feedback Toast */}
+      { }
       {gestureMessage && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-lg font-semibold z-50 pointer-events-none animate-fadeOut">
           {gestureMessage}
         </div>
       )}
       
-      {/* Video Controls Overlay */}
+      { }
       <div 
         className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${
           showControls ? 'opacity-100' : 'opacity-0'
@@ -465,7 +465,7 @@ export default function GestureVideoPlayer({
         </div>
       </div>
       
-      {/* Gesture Guide */}
+      { }
       <div className="absolute bottom-4 left-4 bg-black/60 text-white text-xs px-3 py-2 rounded-lg pointer-events-none">
         <div className="font-semibold mb-1">🎮 Gesture Controls</div>
         <div className="space-y-1 text-[11px]">

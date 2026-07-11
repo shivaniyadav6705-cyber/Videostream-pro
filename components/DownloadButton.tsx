@@ -22,7 +22,7 @@ export default function DownloadButton({
   const [userPlan, setUserPlan] = useState<string>('free');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // ✅ FIX: Load user from sessionStorage
+
   useEffect(() => {
     const token = getToken();
     const savedUser = getUser();
@@ -42,7 +42,7 @@ export default function DownloadButton({
     setDownloadStatus('downloading');
     setMessage('Processing download...');
 
-    // ✅ FIX: Get token from sessionStorage
+    
     const token = getToken();
 
     try {
@@ -74,11 +74,11 @@ export default function DownloadButton({
         setMessage(`✅ ${videoTitle} downloaded!`);
         toast.success(`${videoTitle} downloaded!`);
 
-        // ✅ FIX: Update sessionStorage with fresh data
+       
         const savedUser = getUser();
         if (savedUser) {
           const user = savedUser;
-          // Add new download to front of array
+          
           const newDownload = {
             id: Date.now(),
             videoId,
@@ -93,7 +93,7 @@ export default function DownloadButton({
           setUser(user);
         }
 
-        // Simulate file download
+        
         const videoContent = `
           Video: ${videoTitle}
           Duration: ${videoDuration}
